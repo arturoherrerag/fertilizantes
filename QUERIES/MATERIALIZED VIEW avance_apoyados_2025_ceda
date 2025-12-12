@@ -1,0 +1,55 @@
+CREATE MATERIALIZED VIEW public.avance_apoyados_2025_listado_ceda AS
+SELECT
+    "unidad_operativa",
+    "estado",
+    "zona_operativa",
+    "id_ceda_agricultura",
+    "nombre_ceda",
+
+    -- ACCESO DIRECTO
+    SUM(CASE WHEN "tipo_incorporacion" = 'ACCESO_DIRECTO' THEN 1 ELSE 0 END)                                                   AS "ad_apoyados",
+    COALESCE(SUM(CASE WHEN "tipo_incorporacion" = 'ACCESO_DIRECTO' THEN "hectareas"  ELSE 0 END), 0)                           AS "ad_hectareas",
+    COALESCE(SUM(CASE WHEN "tipo_incorporacion" = 'ACCESO_DIRECTO' THEN "dap_ton"    ELSE 0 END), 0)                           AS "ad_dap_ton",
+    COALESCE(SUM(CASE WHEN "tipo_incorporacion" = 'ACCESO_DIRECTO' THEN "urea_ton"   ELSE 0 END), 0)                           AS "ad_urea_ton",
+    COALESCE(SUM(CASE WHEN "tipo_incorporacion" = 'ACCESO_DIRECTO' THEN "total_ton"  ELSE 0 END), 0)                           AS "ad_total_ton",
+
+    -- NUEVO INGRESO
+    SUM(CASE WHEN "tipo_incorporacion" = 'NUEVO_INGRESO' THEN 1 ELSE 0 END)                                                    AS "ni_apoyados",
+    COALESCE(SUM(CASE WHEN "tipo_incorporacion" = 'NUEVO_INGRESO' THEN "hectareas"  ELSE 0 END), 0)                            AS "ni_hectareas",
+    COALESCE(SUM(CASE WHEN "tipo_incorporacion" = 'NUEVO_INGRESO' THEN "dap_ton"    ELSE 0 END), 0)                            AS "ni_dap_ton",
+    COALESCE(SUM(CASE WHEN "tipo_incorporacion" = 'NUEVO_INGRESO' THEN "urea_ton"   ELSE 0 END), 0)                            AS "ni_urea_ton",
+    COALESCE(SUM(CASE WHEN "tipo_incorporacion" = 'NUEVO_INGRESO' THEN "total_ton"  ELSE 0 END), 0)                            AS "ni_total_ton",
+
+    -- Días transcurridos > 150
+    SUM(CASE WHEN "dias_transcurridos_entrega" > 150 THEN 1 ELSE 0 END)                                                        AS "mas_de_150_dias"
+
+FROM public.avance_apoyados_2025_por_listado
+GROUP BY
+    "unidad_operativa",
+    "estado",
+    "zona_operativa",
+    "id_ceda_agricultura",
+    "nombre_ceda"
+ORDER BY
+    "estado",
+    "id_ceda_agricultura";
+
+
+
+
+
+    -- Dimensiones
+CREATE INDEX IF NOT EXISTS ix_avance2025_ceda_unidad_op
+  ON public.avance_apoyados_2025_listado_ceda ("unidad_operativa");
+
+CREATE INDEX IF NOT EXISTS ix_avance2025_ceda_estado
+  ON public.avance_apoyados_2025_listado_ceda ("estado");
+
+CREATE INDEX IF NOT EXISTS ix_avance2025_ceda_zona
+  ON public.avance_apoyados_2025_listado_ceda ("zona_operativa");
+
+CREATE INDEX IF NOT EXISTS ix_avance2025_ceda_id
+  ON public.avance_apoyados_2025_listado_ceda ("id_ceda_agricultura");
+
+CREATE INDEX IF NOT EXISTS ix_avance2025_ceda_nombre
+  ON public.avance_apoyados_2025_listado_ceda ("nombre_ceda");

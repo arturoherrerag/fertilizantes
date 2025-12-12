@@ -1,0 +1,84 @@
+CREATE MATERIALIZED VIEW IF NOT EXISTS mv_avances_diarios_ceda_estatus_2025 AS
+WITH fechas AS (
+  SELECT fecha
+  FROM dim_fecha
+  WHERE anio = 2025
+),
+dpc_unique AS (
+  SELECT DISTINCT ON (dpc.acuse_estatal)
+         dpc.acuse_estatal,
+         dpc.id_ceda_agricultura,
+         dpc.estatus,
+         CASE WHEN dpc.estatus ILIKE '%Nuevo Ingreso%' THEN 'NUEVO INGRESO'
+              ELSE 'ACCESO DIRECTO' END AS incorporacion
+  FROM derechohabientes_padrones_compilado_2025 dpc
+  ORDER BY dpc.acuse_estatal
+),
+-- Avance real agregado por CEDA + estatus + fecha_entrega
+avances_raw AS (
+  SELECT
+    dh.cdf_entrega                             AS id_ceda_agricultura,
+    dpc.estatus,
+    dpc.incorporacion,
+    dh.fecha_entrega::date                     AS fecha,
+    COUNT(*)                                   AS avance_dh,
+    SUM(dh.superficie_apoyada)                 AS avance_superficie,
+    SUM(dh.ton_dap_entregada)                  AS avance_dap_ton,
+    SUM(dh.ton_urea_entregada)                 AS avance_urea_ton,
+    SUM(dh.ton_dap_entregada + dh.ton_urea_entregada) AS avance_total_ton
+  FROM derechohabientes dh
+  JOIN dpc_unique dpc
+    ON dpc.acuse_estatal = dh.acuse_estatal
+  WHERE dh.fecha_entrega::date BETWEEN DATE '2025-01-01' AND DATE '2025-12-31'
+  GROUP BY dh.cdf_entrega, dpc.estatus, dpc.incorporacion, dh.fecha_entrega::date
+),
+-- Universo CEDA x ESTATUS x FECHA (para rellenar días sin entregas con ceros)
+ceda_estatus AS (
+  SELECT DISTINCT id_ceda_agricultura, estatus, incorporacion
+  FROM dpc_unique
+),
+rd_dedup AS (
+  SELECT DISTINCT ON (id_ceda_agricultura)
+         coordinacion_estatal AS unidad_operativa,
+         estado,
+         zona_operativa,
+         id_ceda_agricultura,
+         nombre_cedas
+  FROM red_distribucion
+  ORDER BY id_ceda_agricultura
+),
+spine AS (
+  SELECT
+    ce.id_ceda_agricultura,
+    ce.estatus,
+    ce.incorporacion,
+    f.fecha
+  FROM ceda_estatus ce
+  CROSS JOIN fechas f
+)
+SELECT
+  rd.unidad_operativa,
+  rd.estado,
+  rd.zona_operativa,
+  s.id_ceda_agricultura,
+  rd.nombre_cedas,
+  s.estatus,
+  s.incorporacion,
+  s.fecha,
+  COALESCE(ar.avance_dh, 0)          AS avance_dh,
+  COALESCE(ar.avance_superficie, 0)   AS avance_superficie,
+  COALESCE(ar.avance_dap_ton, 0)      AS avance_dap_ton,
+  COALESCE(ar.avance_urea_ton, 0)     AS avance_urea_ton,
+  COALESCE(ar.avance_total_ton, 0)    AS avance_total_ton
+FROM spine s
+LEFT JOIN avances_raw ar
+  ON ar.id_ceda_agricultura = s.id_ceda_agricultura
+ AND ar.estatus             = s.estatus
+ AND ar.incorporacion       = s.incorporacion
+ AND ar.fecha               = s.fecha
+LEFT JOIN rd_dedup rd
+  ON rd.id_ceda_agricultura = s.id_ceda_agricultura
+ORDER BY estado, unidad_operativa, zona_operativa, id_ceda_agricultura, estatus, fecha;
+
+CREATE INDEX IF NOT EXISTS ix_mv_avances_diarios_ceda_estatus_2025_keys
+  ON mv_avances_diarios_ceda_estatus_2025 (fecha, id_ceda_agricultura, estado, unidad_operativa, zona_operativa, estatus, incorporacion);

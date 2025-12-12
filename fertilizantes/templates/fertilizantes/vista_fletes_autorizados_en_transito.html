@@ -1,0 +1,130 @@
+{% extends 'fertilizantes/base.html' %}
+{% load formatos %}
+
+{% block title %}Fletes Autorizados en Tránsito{% endblock %}
+
+{% block content %}
+<h2>Fletes Autorizados en Tránsito</h2>
+
+<!-- Filtros con AJAX -->
+<form method="get" id="filtros-form" class="row g-3 mb-4">
+  <div class="col-md-4">
+    <label for="unidad_operativa">Unidad Operativa:</label>
+    <select name="unidad_operativa" id="unidad_operativa" class="form-select">
+      <option value="">-- Todas --</option>
+      {% for u in unidades %}
+        <option value="{{ u }}" {% if u == unidad_seleccionada %}selected{% endif %}>{{ u }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-4">
+    <label for="estado">Estado:</label>
+    <select name="estado" id="estado" class="form-select">
+      <option value="">-- Todos --</option>
+      {% for e in estados %}
+        <option value="{{ e }}" {% if e == estado_seleccionado %}selected{% endif %}>{{ e }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-4">
+    <label for="zona_operativa">Zona Operativa:</label>
+    <select name="zona_operativa" id="zona_operativa" class="form-select">
+      <option value="">-- Todas --</option>
+      {% for z in zonas %}
+        <option value="{{ z }}" {% if z == zona_seleccionada %}selected{% endif %}>{{ z }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="col-md-12">
+    <button type="submit" class="btn btn-success mt-2">🔍 Filtrar</button>
+  </div>
+</form>
+
+<!-- Resumen -->
+<hr>
+<h5>Resumen</h5>
+<table class="table table-bordered w-auto mb-4">
+  <thead class="table-light">
+    <tr>
+      <th>Total Fletes</th>
+      <th>Total Toneladas</th>
+      <th>Máximo Días en Tránsito</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>{{ total_fletes|formato_mx }}</td>
+      <td>{{ total_toneladas|formato_mx:2 }}</td>
+      <td>{{ max_dias|formato_mx }}</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- Tabla de datos -->
+<div class="table-responsive">
+  <table class="table table-bordered table-hover">
+    <thead class="table-secondary">
+      <tr>
+        <th>Unidad Operativa</th>
+        <th>Estado</th>
+        <th>Zona Operativa</th>
+        <th>ID CEDA Agricultura</th>
+        <th>Nombre del CEDA</th>
+        <th>Folio del Flete</th>
+        <th>Producto</th>
+        <th>Toneladas Iniciales</th>
+        <th class="text-nowrap">Fecha de Salida</th>
+        <th>Días en Tránsito</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for fila in datos %}
+      <tr>
+        <td>{{ fila.unidad_operativa }}</td>
+        <td>{{ fila.estado }}</td>
+        <td>{{ fila.zona_operativa }}</td>
+        <td>{{ fila.id_ceda_agricultura }}</td>
+        <td>{{ fila.nombre_cedas }}</td>
+        <td class="text-nowrap">{{ fila.folio_del_flete }}</td>
+        <td>{{ fila.producto }}</td>
+        <td>{{ fila.toneladas_iniciales|formato_mx:2 }}</td>
+        <td>{{ fila.fecha_de_salida }}</td>
+        <td>{{ fila.dias_en_transito|formato_mx }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Script AJAX -->
+<script>
+document.getElementById('unidad_operativa').addEventListener('change', function () {
+  const unidad = this.value;
+  fetch(`/ajax/filtros_generales/?tabla=fletes_en_transito_detalle&unidad_operativa=${unidad}`)
+    .then(response => response.json())
+    .then(data => {
+      const estadoSelect = document.getElementById('estado');
+      estadoSelect.innerHTML = '<option value="">-- Todos --</option>';
+      data.estados.forEach(e => {
+        estadoSelect.innerHTML += `<option value="${e}">${e}</option>`;
+      });
+      document.getElementById('zona_operativa').innerHTML = '<option value="">-- Todas --</option>';
+    });
+});
+
+document.getElementById('estado').addEventListener('change', function () {
+  const unidad = document.getElementById('unidad_operativa').value;
+  const estado = this.value;
+  fetch(`/ajax/filtros_generales/?tabla=fletes_en_transito_detalle&unidad_operativa=${unidad}&estado=${estado}`)
+    .then(response => response.json())
+    .then(data => {
+      const zonaSelect = document.getElementById('zona_operativa');
+      zonaSelect.innerHTML = '<option value="">-- Todas --</option>';
+      data.zonas.forEach(z => {
+        zonaSelect.innerHTML += `<option value="${z}">${z}</option>`;
+      });
+    });
+});
+</script>
+{% endblock %}

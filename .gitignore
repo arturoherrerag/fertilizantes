@@ -1,0 +1,70 @@
+# === Sistema Fertilizantes – Git limpio ===
+
+# Archivos de sistema / OS
+.DS_Store
+Thumbs.db
+
+# Archivos compilados de Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Entornos virtuales
+ENTORNO/
+env/
+venv/
+.venv/
+
+# Bases de datos locales (si hubiera)
+*.sqlite3
+
+# Variables de entorno
+.env
+
+# Logs
+*.log
+server_output.log
+error_inventarios.txt
+
+# Archivos de medios / estáticos generados
+/media/
+/staticfiles/
+
+# === Carpetas de datos pesados y respaldos (NO versionar) ===
+BACKUPS/
+RESPALDOS_BD/
+BASES_ORIGINALES_SIGAP/
+EXPORTACIONES/
+PROCESADOS/
+TABLAS_DINAMICAS/
+CONTEXT_PACK_*/
+JUPYTER_LAB/
+SCRIPTS_RESTAURADOS/
+
+# === Copias o proyectos antiguos que no deben ir al nuevo Git ===
+dashboard_web/
+
+# === Archivos potencialmente grandes o de respaldo ===
+*.dump
+*.bak
+
+# Scripts .command que NO queremos versionar (relacionados con Git/backups)
+fertilizantes_backup.command
+pull_request_fertilizantes.command
+restaurar_respaldo_fertilizantes.command
+
+
+# === Backups internos y archivos temporales (no versionar) ===
+.git_backup_*/
+.gitignore_backup_*
+.ultimos_commits.tmp
+
+# Mapas pesados (solo uso local, no versionar; superan 100MB)
+MAPAS/cedas_mapa_mexico.html
+MAPAS/mapa_mexico_estados.html
+MAPAS/mexico.json
+
+# Credenciales sensibles (Google Cloud) - nunca versionar
+SCRIPTS/inventarios-2025-pf-69b1417ea0df.json
+SCRIPTS/*.json

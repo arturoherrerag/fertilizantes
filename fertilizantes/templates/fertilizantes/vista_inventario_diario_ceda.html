@@ -1,0 +1,93 @@
+{% extends 'fertilizantes/base.html' %}
+{% load formatos %}
+{% load static %}
+
+{% block title %}Historial Diario de Inventario{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">📊 Historial Diario de Inventario por CEDA</h2>
+
+{% if ceda_info %}
+<div class="card shadow-sm mb-4">
+  <div class="card-header bg-primary text-white">
+    <strong>📍 Información del CEDA</strong>
+  </div>
+  <div class="card-body p-3">
+    <div class="row">
+      <div class="col-md-6">
+        <p><strong>Unidad Operativa:</strong> {{ ceda_info.unidad }}</p>
+        <p><strong>Estado:</strong> {{ ceda_info.estado }}</p>
+      </div>
+      <div class="col-md-6">
+        <p><strong>Zona Operativa:</strong> {{ ceda_info.zona }}</p>
+        <p><strong>Nombre del CEDA:</strong> {{ ceda_info.nombre }}</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<form method="get" id="filtros-form" class="row g-3 mb-4">
+  <div class="col-md-4">
+    <label for="ceda">ID CEDA Agricultura:</label>
+    <input type="text" name="ceda" id="ceda" class="form-control" value="{{ ceda }}">
+  </div>
+  <div class="col-md-2 align-self-end">
+    <button type="submit" class="btn btn-primary w-100">🔍 Buscar</button>
+  </div>
+</form>
+
+{% if resumen %}
+<hr>
+<h4>📦 Inventario Actual (ton)</h4>
+<table class="table table-bordered w-auto mb-4">
+  <thead class="table-light">
+    <tr>
+      <th>DAP Inventario</th>
+      <th>UREA Inventario</th>
+      <th>Total Toneladas</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>{{ resumen.dap|formato_mx:3 }}</td>
+      <td>{{ resumen.urea|formato_mx:3 }}</td>
+      <td><strong>{{ resumen.total|formato_mx:3 }}</strong></td>
+    </tr>
+  </tbody>
+</table>
+{% endif %}
+
+<div class="table-responsive mt-4">
+  <table class="table table-bordered table-hover">
+    <thead style="background-color: #e0e0e0;">
+      <tr>
+        <th>Fecha</th>
+        <th>DAP Entrada</th>
+        <th>UREA Entrada</th>
+        <th>DAP Salida</th>
+        <th>UREA Salida</th>
+        <th>DAP Inventario</th>
+        <th>UREA Inventario</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for fila in datos %}
+      <tr>
+        <td>{{ fila.fecha|date:"d/m/Y" }}</td>
+        <td>{{ fila.dap_ton_total_entrada|formato_mx:3 }}</td>
+        <td>{{ fila.urea_ton_total_entrada|formato_mx:3 }}</td>
+        <td>{{ fila.dap_ton_total_salida|formato_mx:3 }}</td>
+        <td>{{ fila.urea_ton_total_salida|formato_mx:3 }}</td>
+        <td {% if fila.dap_ton_inventario_acumulado < 0 %}style="color:red;"{% endif %}>
+          {{ fila.dap_ton_inventario_acumulado|formato_mx:3 }}
+        </td>
+        <td {% if fila.urea_ton_inventario_acumulado < 0 %}style="color:red;"{% endif %}>
+          {{ fila.urea_ton_inventario_acumulado|formato_mx:3 }}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

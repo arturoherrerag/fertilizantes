@@ -1,0 +1,101 @@
+{% extends 'fertilizantes/base.html' %}
+{% load formatos %}
+
+{% block title %}Inventarios Negativos por CEDA y Día{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">CEDAs con Inventarios Negativos por Día</h2>
+
+<form method="get" class="row g-3 mb-4" id="filtros-form">
+  <div class="col-md-4">
+    <label for="unidad_operativa">Unidad Operativa:</label>
+    <select name="unidad_operativa" id="unidad_operativa" class="form-select">
+      <option value="">-- Todas --</option>
+      {% for u in unidades %}
+        <option value="{{ u }}" {% if u == unidad_seleccionada %}selected{% endif %}>{{ u }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="col-md-4">
+    <label for="estado">Estado:</label>
+    <select name="estado" id="estado" class="form-select">
+      <option value="">-- Todos --</option>
+      {% for e in estados %}
+        <option value="{{ e }}" {% if e == estado_seleccionada %}selected{% endif %}>{{ e }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="col-md-4 d-flex align-items-end">
+    <button type="submit" class="btn btn-primary w-100">🔍 Aplicar Filtros</button>
+  </div>
+</form>
+
+<div class="table-responsive mt-4">
+  <table class="table table-bordered table-striped table-hover table-sm align-middle text-center">
+    <thead class="table-light">
+      <tr class="align-middle">
+        <th>Fecha</th>
+        <th style="white-space: nowrap;">Unidad Operativa</th>
+        <th style="white-space: nowrap;">Estado</th>
+        <th style="white-space: nowrap;">Zona Operativa</th>
+        <th style="white-space: nowrap;">ID CEDA</th>
+        <th style="white-space: nowrap;">Nombre del CEDA</th>
+        <th>DAP Inv.</th>
+        <th>UREA Inv.</th>
+        <th>DAP Flete Ent.</th>
+        <th>UREA Flete Ent.</th>
+        <th>DAP Transf Ent.</th>
+        <th>UREA Transf Ent.</th>
+        <th>DAP Rem Ent.</th>
+        <th>UREA Rem Ent.</th>
+        <th>DAP Ent Sal.</th>
+        <th>UREA Ent Sal.</th>
+        <th>DAP Transf Sal.</th>
+        <th>UREA Transf Sal.</th>
+        <th>DAP Rem Sal.</th>
+        <th>UREA Rem Sal.</th>
+        <th>DAP Incid.</th>
+        <th>UREA Incid.</th>
+        <th>DAP Total Ent.</th>
+        <th>UREA Total Ent.</th>
+        <th>DAP Total Sal.</th>
+        <th>UREA Total Sal.</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for fila in datos %}
+      <tr>
+        <td>{{ fila.fecha|date:"d/m/Y" }}</td>
+        <td style="white-space: nowrap;">{{ fila.unidad_operativa }}</td>
+        <td style="white-space: nowrap;">{{ fila.estado }}</td>
+        <td style="white-space: nowrap;">{{ fila.zona_operativa }}</td>
+        <td style="white-space: nowrap;">{{ fila.id_ceda_agricultura }}</td>
+        <td style="white-space: nowrap;">{{ fila.nombre_cedas }}</td>
+        <td {% if fila.dap_inventario < 0 %}class="text-danger fw-bold"{% endif %}>{{ fila.dap_inventario|formato_mx:3 }}</td>
+        <td {% if fila.urea_inventario < 0 %}class="text-danger fw-bold"{% endif %}>{{ fila.urea_inventario|formato_mx:3 }}</td>
+        <td>{{ fila.dap_ton_flete_entrada|formato_mx:3 }}</td>
+        <td>{{ fila.urea_ton_flete_entrada|formato_mx:3 }}</td>
+        <td>{{ fila.dap_ton_transfer_entrada|formato_mx:3 }}</td>
+        <td>{{ fila.urea_ton_transfer_entrada|formato_mx:3 }}</td>
+        <td>{{ fila.dap_ton_remanente_entrada|formato_mx:3 }}</td>
+        <td>{{ fila.urea_ton_remanente_entrada|formato_mx:3 }}</td>
+        <td>{{ fila.dap_ton_entrega_salida|formato_mx:3 }}</td>
+        <td>{{ fila.urea_ton_entrega_salida|formato_mx:3 }}</td>
+        <td>{{ fila.dap_ton_transfer_salida|formato_mx:3 }}</td>
+        <td>{{ fila.urea_ton_transfer_salida|formato_mx:3 }}</td>
+        <td>{{ fila.dap_ton_remanente_salida|formato_mx:3 }}</td>
+        <td>{{ fila.urea_ton_remanente_salida|formato_mx:3 }}</td>
+        <td>{{ fila.dap_ton_incidentes_salida|formato_mx:3 }}</td>
+        <td>{{ fila.urea_ton_incidentes_salida|formato_mx:3 }}</td>
+        <td>{{ fila.dap_ton_total_entrada|formato_mx:3 }}</td>
+        <td>{{ fila.urea_ton_total_entrada|formato_mx:3 }}</td>
+        <td>{{ fila.dap_ton_total_salida|formato_mx:3 }}</td>
+        <td>{{ fila.urea_ton_total_salida|formato_mx:3 }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

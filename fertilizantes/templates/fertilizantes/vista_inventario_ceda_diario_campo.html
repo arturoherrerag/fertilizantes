@@ -1,0 +1,51 @@
+{% extends 'fertilizantes/base.html' %}
+{% load formatos %}
+{% block title %}Inventario Diario CEDA (Campo vs SIGAP){% endblock %}
+{% block content %}
+<h2>🗓️ Inventario Diario – Campo vs SIGAP</h2>
+
+{% include "fertilizantes/_filtros_generales.html" with tabla_ajax="inventario_ceda_diario_2025_campo_sigap" %}
+
+{# ----- BLOQUE CONDICIONAL ----- #}
+{% if mensaje %}
+  <div class="alert alert-info my-4">{{ mensaje }}</div>
+{% endif %}
+
+{% if datos %}
+  <div class="table-responsive mt-4">
+    <table class="table table-bordered table-hover">
+      <!--  cabeceras y filas que ya tienes  -->
+    </table>
+  </div>
+{% endif %}
+{# ----- FIN BLOQUE CONDICIONAL ----- #}
+
+<div class="table-responsive mt-4">
+  <table class="table table-bordered table-hover">
+    <thead class="table-light">
+      <tr>
+        <th>Fecha</th><th>Unidad Operativa</th><th>Estado</th><th>Zona</th>
+        <th>ID CEDA</th><th>Nombre CEDA</th>
+        <th>DAP SIGAP (t)</th><th>UREA SIGAP (t)</th>
+        <th>DAP Campo (t)</th><th>UREA Campo (t)</th>
+        <th>Δ DAP</th><th>Δ UREA</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for f in datos %}
+      <tr>
+        <td>{{ f.fecha|date:"d/m/Y" }}</td>
+        <td>{{ f.unidad_operativa }}</td><td>{{ f.estado }}</td><td>{{ f.zona_operativa }}</td>
+        <td>{{ f.id_ceda_agricultura }}</td><td>{{ f.nombre_cedas }}</td>
+        <td>{{ f.dap_inventario_sigap|formato_mx:3 }}</td>
+        <td>{{ f.urea_inventario_sigap|formato_mx:3 }}</td>
+        <td>{{ f.dap_inventario_campo|formato_mx:3 }}</td>
+        <td>{{ f.urea_inventario_campo|formato_mx:3 }}</td>
+        <td>{{ f.dap_sigap_campo|formato_mx:3 }}</td>
+        <td>{{ f.urea_sigap_campo|formato_mx:3 }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,56 @@
+CREATE MATERIALIZED VIEW public.avance_apoyados_2025_por_listado AS
+SELECT
+    rd.coordinacion_estatal                     AS "unidad_operativa",
+    rd.estado,
+    rd.zona_operativa,
+    dh.acuse_estatal,
+    dh.curp_renapo                              AS "curp",
+    dc.primer_apellido,
+    dc.segundo_apellido,
+    dc.nombre,
+    dh.cdf_entrega                              AS "id_ceda_agricultura",
+    rd.nombre_cedas                             AS "nombre_ceda",
+    dc.fecha_de_publicacion                     AS "fecha_publicacion",
+    dh.fecha_entrega                            AS "fecha_entrega",
+    dc.estatus                                  AS "listado",
+    CASE
+        WHEN dc.estatus ILIKE '%Nuevo Ingreso%' THEN 'NUEVO_INGRESO'
+        ELSE 'ACCESO_DIRECTO'
+    END                                         AS "tipo_incorporacion",
+    dh.cultivo,
+    dh.superficie_apoyada                       AS "hectareas",
+    dh.ton_dap_entregada                        AS "dap_ton",
+    dh.ton_urea_entregada                       AS "urea_ton",
+    COALESCE(dh.ton_dap_entregada, 0)
+      + COALESCE(dh.ton_urea_entregada, 0)     AS "total_ton",
+    CASE
+      WHEN dc.fecha_de_publicacion IS NOT NULL AND dh.fecha_entrega IS NOT NULL
+      THEN (dh.fecha_entrega::date - dc.fecha_de_publicacion::date) +1
+      ELSE NULL
+    END                                         AS "dias_transcurridos_entrega"
+FROM public.derechohabientes dh
+LEFT JOIN public.derechohabientes_padrones_compilado_2025 dc
+  ON dc.acuse_estatal = dh.acuse_estatal
+LEFT JOIN red_distribucion rd
+  ON rd.id_ceda_agricultura = dh.cdf_entrega;
+
+
+  -- Para joins/cruces por acuse:
+CREATE INDEX IF NOT EXISTS ix_avance2025_acuse
+  ON public.avance_apoyados_2025_por_listado ("acuse_estatal");
+
+-- Para joins/cruces por CEDA:
+CREATE INDEX IF NOT EXISTS ix_avance2025_id_ceda
+  ON public.avance_apoyados_2025_por_listado ("id_ceda_agricultura");
+
+CREATE INDEX IF NOT EXISTS ix_avance2025_estado
+  ON public.avance_apoyados_2025_por_listado ("estado");
+
+CREATE INDEX IF NOT EXISTS ix_avance2025_listado
+  ON public.avance_apoyados_2025_por_listado ("listado");
+
+CREATE INDEX IF NOT EXISTS ix_avance2025_tipo_inc
+  ON public.avance_apoyados_2025_por_listado ("tipo_incorporacion");
+
+CREATE INDEX IF NOT EXISTS ix_avance2025_cultivo
+  ON public.avance_apoyados_2025_por_listado ("cultivo");

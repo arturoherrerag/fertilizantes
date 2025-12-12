@@ -1,0 +1,93 @@
+{% extends 'fertilizantes/base.html' %}
+{% load formatos %}
+{% load static %}
+
+{% block title %}Inventarios Negativos Actuales{% endblock %}
+
+{% block content %}
+<h2>📉 Inventarios Negativos Actuales por CEDA</h2>
+
+<!-- Filtros -->
+<form method="get" id="filtros-form" class="row g-3 mb-4">
+  <div class="col-md-4">
+    <label for="unidad_operativa">Unidad Operativa:</label>
+    <select name="unidad_operativa" id="unidad_operativa" class="form-select">
+      <option value="">-- Todas --</option>
+      {% for u in unidades %}
+      <option value="{{ u }}" {% if u == unidad_seleccionada %}selected{% endif %}>{{ u }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-4">
+    <label for="estado">Estado:</label>
+    <select name="estado" id="estado" class="form-select">
+      <option value="">-- Todos --</option>
+      {% for e in estados %}
+      <option value="{{ e }}" {% if e == estado_seleccionado %}selected{% endif %}>{{ e }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-4">
+    <label for="zona_operativa">Zona Operativa:</label>
+    <select name="zona_operativa" id="zona_operativa" class="form-select">
+      <option value="">-- Todas --</option>
+      {% for z in zonas %}
+      <option value="{{ z }}" {% if z == zona_seleccionada %}selected{% endif %}>{{ z }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="col-12">
+    <button type="submit" class="btn btn-primary mt-3">Aplicar Filtros</button>
+  </div>
+</form>
+
+<!-- Tabla -->
+<div class="table-responsive mt-4">
+<table class="table table-bordered table-hover" style="width: 100%;">
+    <thead style="background-color: #e0e0e0;">
+        <tr>
+            <th>Unidad Operativa</th>
+            <th>Estado</th>
+            <th>Zona Operativa</th>
+            <th>ID CEDA Agricultura</th>
+            <th>Nombre del CEDA</th>
+            <th>DAP Inventario (ton)</th>
+            <th>UREA Inventario (ton)</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for fila in datos %}
+        <tr>
+            <td>{{ fila.unidad_operativa }}</td>
+            <td>{{ fila.estado }}</td>
+            <td>{{ fila.zona_operativa }}</td>
+            <td>{{ fila.id_ceda_agricultura }}</td>
+            <td>{{ fila.nombre_cedas }}</td>
+            <td {% if fila.dap_inventario < 0 %}style="color: red;"{% endif %}>{{ fila.dap_inventario|formato_mx:3 }}</td>
+            <td {% if fila.urea_inventario < 0 %}style="color: red;"{% endif %}>{{ fila.urea_inventario|formato_mx:3 }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+
+<!-- Scripts -->
+<script src="{% static 'js/filtros_dependientes.js' %}"></script>
+<script>
+  const urlFiltros = "{% url 'ajax_filtros_generales' %}";
+  const tabla = "inventarios_negativos_2025";
+
+  const unidadSelect = document.getElementById("unidad_operativa");
+  const estadoSelect = document.getElementById("estado");
+  const zonaSelect = document.getElementById("zona_operativa");
+
+  unidadSelect.addEventListener('change', () => {
+    cargarEstados(`${urlFiltros}&tabla=${tabla}`, unidadSelect.value, estadoSelect, zonaSelect);
+  });
+
+  estadoSelect.addEventListener('change', () => {
+    cargarZonas(`${urlFiltros}&tabla=${tabla}`, estadoSelect.value, unidadSelect.value, zonaSelect);
+  });
+</script>
+{% endblock %}

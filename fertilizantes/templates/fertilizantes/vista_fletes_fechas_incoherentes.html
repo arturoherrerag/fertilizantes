@@ -1,0 +1,46 @@
+{% extends 'fertilizantes/base.html' %}
+{% load formatos %}
+
+{% block title %}Fletes con Fechas Incoherentes{% endblock %}
+
+{% block content %}
+<h2>🕒 Fletes con Fechas Incoherentes</h2>
+<p>Casos donde la <strong>fecha de salida</strong> es posterior a la <strong>fecha de llegada</strong> o la <strong>fecha de entrega</strong>.</p>
+
+<div class="table-responsive mt-4">
+  <table class="table table-bordered table-hover">
+    <thead class="table-light">
+      <tr>
+        <th class="text-nowrap">Unidad Operativa</th>
+        <th class="text-nowrap">Estado</th>
+        <th class="text-nowrap">Zona</th>
+        <th class="text-nowrap">ID CEDA</th>
+        <th class="text-nowrap">Nombre del CEDA</th>
+        <th class="text-nowrap">Folio del Flete</th>
+        <th class="text-nowrap">Producto</th>
+        <th class="text-nowrap">Ton. Recibidas</th>
+        <th class="text-nowrap">Fecha de Salida</th>
+        <th class="text-nowrap">Fecha de Llegada</th>
+        <th class="text-nowrap">Fecha de Entrega</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for fila in datos %}
+      <tr>
+        <td class="text-nowrap">{{ fila.coordinacion_estatal }}</td>
+        <td class="text-nowrap">{{ fila.estado }}</td>
+        <td class="text-nowrap">{{ fila.zona_operativa }}</td>
+        <td class="text-nowrap">{{ fila.id_ceda_agricultura }}</td>
+        <td class="text-nowrap">{{ fila.nombre_cedas }}</td>
+        <td class="text-nowrap">{{ fila.folio_del_flete }}</td>
+        <td class="text-nowrap">{{ fila.abreviacion_producto }}</td>
+        <td class="text-nowrap">{{ fila.toneladas_en_el_destino|formato_mx:2 }}</td>
+        <td class="text-nowrap text-danger">{{ fila.fecha_de_salida|date:"d/m/Y" }}</td>
+        <td class="text-nowrap">{{ fila.fecha_de_llegada|date:"d/m/Y	" }}</td>
+        <td class="text-nowrap">{{ fila.fecha_de_entrega|date:"d/m/Y H:i" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

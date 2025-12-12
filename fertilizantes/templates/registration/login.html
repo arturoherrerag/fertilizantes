@@ -1,0 +1,34 @@
+{% extends 'fertilizantes/base.html' %}
+
+{% block title %}Iniciar Sesión{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+  <div class="col-md-4">
+    <div class="card shadow">
+      <div class="card-header card-header-custom text-center">
+        Iniciar sesión
+      </div>
+      <div class="card-body">
+        {% if form.errors %}
+          <div class="alert alert-danger">Usuario o contraseña incorrectos.</div>
+        {% endif %}
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label for="id_username" class="form-label">Usuario</label>
+            {{ form.username }}
+          </div>
+          <div class="mb-3">
+            <label for="id_password" class="form-label">Contraseña</label>
+            {{ form.password }}
+          </div>
+          <div class="d-grid">
+            <button type="submit" class="btn btn-success">Ingresar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,28 @@
+-- 2) Vista materializada enriquecida con red_distribucion
+DROP MATERIALIZED VIEW IF EXISTS mv_fletes_enriquecidos CASCADE;
+
+CREATE MATERIALIZED VIEW mv_fletes_enriquecidos AS
+SELECT
+  f.*,
+  rd.coordinacion_estatal    AS unidad_operativa,
+  rd.estado                  AS estado,            -- mapea al estado de la red
+  rd.zona_operativa          AS zona_operativa,
+  rd.nombre_cedas            AS nombre_cedas
+FROM fletes f
+LEFT JOIN red_distribucion rd
+       ON f.id_ceda_agricultura = rd.id_ceda_agricultura;
+
+-- Índices para los filtros que pediste:
+CREATE INDEX IF NOT EXISTS idx_mv_fletes_enriq_fechas
+  ON mv_fletes_enriquecidos (fecha_de_salida, fecha_de_entrega);
+CREATE INDEX IF NOT EXISTS idx_mv_fletes_enriq_geo
+  ON mv_fletes_enriquecidos (unidad_operativa, estado, zona_operativa, id_ceda_agricultura);
+CREATE INDEX IF NOT EXISTS idx_mv_fletes_enriq_estatus_prod
+  ON mv_fletes_enriquecidos (estatus, abreviacion_producto);
+CREATE INDEX IF NOT EXISTS idx_mv_fletes_enriq_cdf
+  ON mv_fletes_enriquecidos (cdf_destino_original, cdf_destino_final);
+CREATE INDEX IF NOT EXISTS idx_mv_fletes_enriq_folio
+  ON mv_fletes_enriquecidos (folio_del_flete);
+
+-- Refresco (cuando cargues nuevos fletes/red):
+-- REFRESH MATERIALIZED VIEW CONCURRENTLY mv_fletes_enriquecidos;

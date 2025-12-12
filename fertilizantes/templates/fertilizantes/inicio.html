@@ -1,0 +1,78 @@
+{% extends 'fertilizantes/base.html' %}
+
+{% block title %}Inicio - Programa de Fertilizantes{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+
+    <div class="text-center mb-5">
+        <h1>Programa de Fertilizantes</h1>
+        <p class="lead">Sistema de Monitoreo y Administración de Bases de Datos</p>
+    </div>
+
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+
+        <div class="col">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Actualización</h5>
+                    <p class="card-text">Actualizar todas las bases de datos.</p>
+                    <a href="/actualizacion/" class="btn btn-success">Ir</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Integrar Informe</h5>
+                    <p class="card-text">Generar informe consolidado.</p>
+                    <a href="#" class="btn btn-success">Ir</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Vistas</h5>
+                    <p class="card-text">Consultar tablas resumidas.</p>
+                    <a href="/vistas/" class="btn btn-success">Ir</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Reportes</h5>
+                    <p class="card-text">Generar reportes operativos.</p>
+                    <a href="/reportes/" class="btn btn-success">Ir</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Visualización</h5>
+                    <p class="card-text">Ver gráficos y mapas.</p>
+                    <a href="/visualizacion/" class="btn btn-success">Ir</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Gestión de Datos</h5>
+                    <p class="card-text">Registrar o modificar información.</p>
+                    <a href="#" class="btn btn-success">Ir</a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

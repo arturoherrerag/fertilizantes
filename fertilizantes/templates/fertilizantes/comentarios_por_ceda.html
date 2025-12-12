@@ -1,0 +1,112 @@
+{% extends "fertilizantes/base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2 class="mb-4">Comentarios por CEDA</h2>
+
+  <!-- Filtros generales -->
+  {% include "fertilizantes/_filtros_sin_fechas.html" with tabla_ajax="vista_comentarios_ceda" %}
+
+  {% if filtro_aplicado %}
+    {% if not df.empty %}
+
+    <div class="mb-2">
+      <button class="btn btn-outline-secondary btn-sm" onclick="toggleColumnasExtra()">Mostrar/Ocultar columnas de ubicación</button>
+    </div>
+
+    <div class="table-responsive">
+      <table id="comentariosTable" class="table table-bordered table-striped table-sm align-middle text-center">
+        <thead class="table-light small">
+          <tr>
+            <th class="col-extra">Unidad</th>
+            <th class="col-extra">Estado</th>
+            <th class="col-extra">Zona</th>
+            <th>ID CEDA</th>
+			<th>Nombre</th>
+            <th>Comentarios actuales</th><th>Nuevo comentario</th>
+          </tr>
+        </thead>
+        <tbody class="small">
+          {% for row in df.itertuples %}
+          <tr>
+            <td class="col-extra">{{ row.unidad_operativa }}</td>
+            <td class="col-extra">{{ row.estado }}</td>
+            <td class="col-extra">{{ row.zona_operativa }}</td>
+            <td>{{ row.id_ceda_agricultura }}</td>
+            <td>{{ row.nombre_cedas }}</td>
+			<td>
+			  <textarea readonly class="comentarios-actuales form-control form-control-sm {% if row.comentarios_actuales %}bg-warning-subtle{% endif %}"
+			            style="width: 300px; max-height: 250px; overflow: auto; resize: vertical;">
+			    {{ row.comentarios_actuales|default:"" }}
+			  </textarea>
+			</td>
+            <td>
+              <form method="post" class="d-flex flex-column">
+                {% csrf_token %}
+                <input type="hidden" name="id_ceda_agricultura" value="{{ row.id_ceda_agricultura }}">
+                <textarea name="comentario" rows="3" class="form-control form-control-sm mb-1" placeholder="Agregar comentario..." style="width: 280px; resize: vertical;"></textarea>
+                <button type="submit" class="btn btn-sm btn-primary align-self-end">Guardar</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <div class="alert alert-warning">No se encontraron datos para los filtros seleccionados.</div>
+    {% endif %}
+  {% else %}
+    <div class="alert alert-info">Selecciona al menos un filtro para mostrar los datos.</div>
+  {% endif %}
+</div>
+
+<!-- Script de exportación -->
+<script>
+function exportTableToCSV(filename) {
+  const csv = [];
+  const rows = document.querySelectorAll("table tr");
+  for (let i = 0; i < rows.length; i++) {
+    const row = [], cols = rows[i].querySelectorAll("td, th");
+    for (let j = 0; j < cols.length; j++) {
+      row.push('"' + cols[j].innerText.replace(/\n/g, ' ') + '"');
+    }
+    csv.push(row.join(","));
+  }
+  const csvFile = new Blob([csv.join("\n")], { type: "text/csv" });
+  const link = document.createElement("a");
+  link.download = filename;
+  link.href = window.URL.createObjectURL(csvFile);
+  link.style.display = "none";
+  document.body.appendChild(link);
+  link.click();
+}
+
+function toggleColumnasExtra() {
+  const columnas = document.querySelectorAll('.col-extra');
+  columnas.forEach(col => {
+    col.style.display = (col.style.display === 'none') ? 'table-cell' : 'none';
+  });
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  toggleColumnasExtra();
+});
+</script>
+
+<style>
+textarea.comentarios-actuales {
+  width: 300px;          /* puedes ajustar este valor si lo quieres más ancho */
+  height: 100px;
+  resize: vertical;      /* el usuario puede agrandarla verticalmente */
+  overflow-y: auto;      /* si el texto es largo, aparece scroll */
+  border: none;
+  background-color: #f8f9fa;  /* mismo fondo que el resto de la celda */
+  font-size: 0.85rem;
+  padding: 4px;
+  line-height: 1.2;
+}
+</style>
+
+{% endblock %}

@@ -1,0 +1,255 @@
+{% extends 'fertilizantes/base.html' %}
+
+{% block title %}Vistas - Programa de Fertilizantes{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+
+    <div class="text-center mb-5">
+        <h1>Vistas de Resúmenes</h1>
+        <p class="lead">Consulta rápida de los principales indicadores operativos.</p>
+    </div>
+
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+
+        <div class="col">
+            <div class="card h-100 text-center shadow">
+                <div class="card-body">
+                    <h5 class="card-title">🚚 Fletes en Tránsito</h5>
+                    <p class="card-text">Resumen de fletes actualmente en tránsito por estado.</p>
+                    <a href="{% url 'vista_fletes_transito' %}" class="btn btn-success">Ver Resumen</a>
+                </div>
+            </div>
+        </div>
+
+
+<div class="col">
+  <div class="card h-100 text-center shadow">
+    <div class="card-body">
+      <h5 class="card-title">🚛 Fletes en Tránsito por CEDA</h5>
+      <p class="card-text">Detalle de fletes aún en tránsito con días acumulados.</p>
+      <a href="{% url 'vista_fletes_transito_por_CEDA' %}" class="btn btn-success">Ver Detalle</a>
+    </div>
+  </div>
+</div>
+
+
+<div class="col">
+  <div class="card h-100 text-center shadow">
+    <div class="card-body">
+      <h5 class="card-title">🚛 Fletes Autorizados en Tránsito</h5>
+      <p class="card-text">Detalle de fletes con estatus autorizado y en tránsito.</p>
+      <a href="{% url 'vista_fletes_autorizados_en_transito' %}" class="btn btn-success">Ver Fletes</a>
+    </div>
+  </div>
+</div>
+
+
+<div class="col">
+  <div class="card h-100 text-center shadow">
+    <div class="card-body">
+      <h5 class="card-title">📊 Historial Inventario Diario</h5>
+      <p class="card-text">Ver entradas, salidas e inventario acumulado por CEDA y día.</p>
+      <a href="{% url 'vista_inventario_diario_ceda' %}" class="btn btn-success">Ver Historial</a>
+    </div>
+  </div>
+</div>
+
+
+
+<div class="col">
+    <div class="card h-100 text-center shadow">
+        <div class="card-body">
+            <h5 class="card-title">📉 Inventarios Negativos Actuales</h5>
+            <p class="card-text">CEDAs con inventarios negativos al día de hoy.</p>
+            <a href="{% url 'vista_inventarios_negativos_actuales' %}" class="btn btn-danger">Ver Resumen</a>
+        </div>
+    </div>
+</div>
+
+
+<div class="col">
+  <div class="card h-100 text-center shadow">
+    <div class="card-body">
+      <h5 class="card-title">📉 Inventarios Negativos por Día</h5>
+      <p class="card-text">Historial de inventarios negativos por CEDA y fecha.</p>
+      <a href="{% url 'vista_inventarios_negativos_x_dia' %}" class="btn btn-danger">Ver Detalle</a>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- Resumen Remanentes por Estado -->
+<div class="col">
+  <div class="card h-100 text-center shadow">
+    <div class="card-body">
+      <h5 class="card-title">📦 Resumen Remanentes</h5>
+      <p class="card-text">Totales de entrada, salida e inventario por Unidad y Estado.</p>
+      <a href="{% url 'vista_resumen_remanente_estado' %}" class="btn btn-success">Ver Resumen</a>
+    </div>
+  </div>
+</div>
+
+<!-- CEDAs con Remanentes -->
+<div class="col">
+  <div class="card h-100 text-center shadow">
+    <div class="card-body">
+      <h5 class="card-title">📦 CEDAs con Remanentes</h5>
+      <p class="card-text">Listado de CEDAs con inventario remanente mayor a 0.</p>
+      <a href="{% url 'vista_cedas_con_remanentes' %}" class="btn btn-success">Ver CEDAs</a>
+    </div>
+  </div>
+</div>
+
+
+<!-- CEDAs con Remanentes Negativos -->
+<div class="col">
+  <div class="card h-100 text-center shadow">
+    <div class="card-body">
+      <h5 class="card-title">📉 Remanente Negativo</h5>
+      <p class="card-text">CEDAs con inventario negativo de remanente. Atención urgente.</p>
+      <a href="{% url 'vista_cedas_con_remanentes_negativos' %}" class="btn btn-danger">Ver Negativos</a>
+    </div>
+  </div>
+</div>
+
+
+<div class="col">
+  <div class="card h-100 text-center shadow">
+    <div class="card-body">
+      <h5 class="card-title">🚛 Fletes por Toneladas</h5>
+      <p class="card-text">Distribución de fletes según toneladas iniciales.</p>
+      <a href="{% url 'vista_fletes_ton_conteo_detalle' %}" class="btn btn-success">Ver Detalle</a>
+    </div>
+  </div>
+</div>
+
+
+<div class="col">
+  <div class="card h-100 text-center shadow">
+    <div class="card-body">
+      <h5 class="card-title">⚠️ Fletes Atípicos</h5>
+      <p class="card-text">Casos donde las toneladas recibidas difieren significativamente de lo enviado.</p>
+      <a href="{% url 'vista_fletes_atipicos' %}" class="btn btn-danger">Ver Detalle</a>
+    </div>
+  </div>
+</div>
+
+
+<div class="col">
+  <div class="card h-100 text-center shadow">
+    <div class="card-body">
+      <h5 class="card-title">🕒 Fletes con Fechas Incoherentes</h5>
+      <p class="card-text">Casos donde la salida ocurre después de la llegada o entrega.</p>
+      <a href="{% url 'vista_fletes_fechas_incoherentes' %}" class="btn btn-warning">Ver Detalle</a>
+    </div>
+  </div>
+</div>
+
+
+<div class="col-md-4 mb-4">
+  <div class="card shadow-sm h-100">
+    <div class="card-body d-flex flex-column justify-content-between">
+      <div>
+        <h5 class="card-title">📦 Pedidos por Fecha</h5>
+        <p class="card-text">Consulta el desglose diario de pedidos por CEDA con detalle de DAP y UREA.</p>
+      </div>
+      <a href="{% url 'pedidos_detalle_por_fecha' %}" class="btn btn-outline-primary mt-3">Ver Detalles</a>
+    </div>
+  </div>
+</div>
+
+
+<!-- Derechohabientes -->
+<div class="col">
+  <div class="card h-100 text-center shadow">
+    <div class="card-body">
+      <h5 class="card-title">👥 Derechohabientes</h5>
+      <p class="card-text">
+         Consulta de acuses, CURP y ubicación por CEDA. <br>
+         Exporta resultados a CSV.
+      </p>
+      <a href="{% url 'vista_derechohabientes' %}" class="btn btn-success">
+        Abrir Consulta
+      </a>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- Fletes (mv_fletes_enriquecidos) -->
+<div class="col">
+  <div class="card h-100 text-center shadow">
+    <div class="card-body">
+      <h5 class="card-title">🚚 Fletes</h5>
+      <p class="card-text">
+        Consulta y exporta fletes por unidad operativa, estado, zona, estatus,
+        producto, CEDA y folio del flete. <br>
+        Exporta resultados a CSV (y PNG/PPTX donde aplique).
+      </p>
+      <a href="{% url 'vista_fletes' %}" class="btn btn-primary">
+        Abrir Consulta
+      </a>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- Inventario diario Campo vs SIGAP -->
+<div class="col">
+  <div class="card h-100 text-center shadow">
+    <div class="card-body">
+      <h5 class="card-title">📑 Inventario Diario CEDA</h5>
+      <p class="card-text">Comparativo Campo vs SIGAP, por día.</p>
+      <a href="{% url 'vista_inventario_ceda_diario_campo' %}" class="btn btn-success">Ver Inventario</a>
+    </div>
+  </div>
+</div>
+
+<!-- Estadísticas Inventarios Campo -->
+<div class="col">
+  <div class="card h-100 text-center shadow">
+    <div class="card-body">
+      <h5 class="card-title">📈 Estadísticas Inventarios Campo</h5>
+      <p class="card-text">Último inventario, días reportados y RC/COZ.</p>
+      <a href="{% url 'vista_estadisticas_inventarios_campo' %}" class="btn btn-success">Ver Estadísticas</a>
+    </div>
+  </div>
+</div>
+
+
+<!-- Comentarios por CEDA -->
+<div class="col">
+  <div class="card h-100 text-center shadow">
+    <div class="card-body">
+      <h5 class="card-title">🗒️ Comentarios por CEDA</h5>
+      <p class="card-text">Análisis operativo por CEDA y registro de observaciones.</p>
+      <a href="{% url 'comentarios_por_ceda' %}" class="btn btn-success">Ver Comentarios</a>
+    </div>
+  </div>
+</div>
+
+
+<!-- OCR rápido (imágenes / PDF / portapapeles) -->
+<div class="col">
+  <div class="card h-100 text-center shadow">
+    <div class="card-body">
+      <h5 class="card-title">🧾 OCR Rápido</h5>
+      <p class="card-text">
+        Pega capturas, imágenes o PDF y extrae texto plano instantáneo.
+      </p>
+      <a href="{% url 'ocr_page' %}" class="btn btn-info text-white">
+        Abrir OCR
+      </a>
+    </div>
+  </div>
+</div>
+
+
+    </div>
+
+</div>
+{% endblock %}

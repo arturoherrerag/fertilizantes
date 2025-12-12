@@ -1,0 +1,36 @@
+CREATE MATERIALIZED VIEW public.avance_apoyados_2025_listado_estado AS
+SELECT
+    "unidad_operativa",
+    "estado",
+
+    -- ACCESO DIRECTO
+    COALESCE(SUM("ad_apoyados"),   0) AS "ad_apoyados",
+    COALESCE(SUM("ad_hectareas"),  0) AS "ad_hectareas",
+    COALESCE(SUM("ad_dap_ton"),    0) AS "ad_dap_ton",
+    COALESCE(SUM("ad_urea_ton"),   0) AS "ad_urea_ton",
+    COALESCE(SUM("ad_total_ton"),  0) AS "ad_total_ton",
+
+    -- NUEVO INGRESO
+    COALESCE(SUM("ni_apoyados"),   0) AS "ni_apoyados",
+    COALESCE(SUM("ni_hectareas"),  0) AS "ni_hectareas",
+    COALESCE(SUM("ni_dap_ton"),    0) AS "ni_dap_ton",
+    COALESCE(SUM("ni_urea_ton"),   0) AS "ni_urea_ton",
+    COALESCE(SUM("ni_total_ton"),  0) AS "ni_total_ton",
+
+    -- Días transcurridos > 150
+    COALESCE(SUM("mas_de_150_dias"), 0) AS "mas_de_150_dias"
+
+FROM public.avance_apoyados_2025_listado_ceda
+GROUP BY
+    "unidad_operativa",
+    "estado"
+ORDER BY
+    "estado", "unidad_operativa";
+
+
+
+CREATE INDEX IF NOT EXISTS ix_avance2025_estado_unidad
+  ON public.avance_apoyados_2025_listado_estado ("unidad_operativa");
+
+CREATE INDEX IF NOT EXISTS ix_avance2025_estado_estado
+  ON public.avance_apoyados_2025_listado_estado ("estado");

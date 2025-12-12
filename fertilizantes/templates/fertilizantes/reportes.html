@@ -1,0 +1,47 @@
+{% extends 'fertilizantes/base.html' %}
+
+{% block title %}Reportes{% endblock %}
+
+{% block content %}
+<h2>Centro de Reportes</h2>
+
+<div class="row mt-4">
+
+  <div class="col-md-4 mb-4">
+    <div class="card shadow-sm text-center">
+      <div class="card-body">
+        <h5 class="card-title">🚚 Fletes en Tránsito</h5>
+        <a href="{% url 'fletes_transito' %}" class="btn btn-success">Ver Reporte</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4 mb-4">
+    <div class="card shadow-sm text-center">
+      <div class="card-body">
+        <h5 class="card-title">📉 Inventarios Negativos</h5>
+        <a href="{% url 'inventarios_negativos' %}" class="btn btn-success">Ver Reporte</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4 mb-4">
+    <div class="card shadow-sm text-center">
+      <div class="card-body">
+        <h5 class="card-title">📉 Inventarios Negativos Remanente</h5>
+        <a href="{% url 'inventarios_negativos_remanente' %}" class="btn btn-success">Ver Reporte</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4 mb-4">
+    <div class="card shadow-sm text-center">
+      <div class="card-body">
+        <h5 class="card-title">📦 Entregas Nacionales</h5>
+        <a href="{% url 'entregas_nacionales' %}" class="btn btn-success">Ver Reporte</a>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

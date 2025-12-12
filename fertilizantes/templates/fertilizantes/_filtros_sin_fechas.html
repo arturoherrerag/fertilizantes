@@ -1,0 +1,76 @@
+<form id="filtros-form" class="row g-3 mb-3">
+  <div class="col-md-3">
+    <label class="form-label">Unidad operativa</label>
+    <select name="unidad_operativa" id="filtro_unidad" class="form-select">
+      <option value="">-- Todas --</option>
+      {% for u in unidades %}
+        <option value="{{ u }}" {% if u == unidad_operativa_seleccionado %}selected{% endif %}>{{ u }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="col-md-3">
+    <label class="form-label">Estado</label>
+    <select name="estado" id="filtro_estado" class="form-select">
+      <option value="">-- Todos --</option>
+    </select>
+  </div>
+
+  <div class="col-md-3">
+    <label class="form-label">Zona operativa</label>
+    <select name="zona_operativa" id="filtro_zona" class="form-select">
+      <option value="">-- Todas --</option>
+    </select>
+  </div>
+
+  <div class="col-md-3">
+    <label class="form-label">ID CEDA Agricultura</label>
+    <input name="id_ceda_agricultura" id="filtro_ceda" class="form-control" placeholder="Opcional">
+  </div>
+
+  <div class="col-12 text-end">
+    <button class="btn btn-primary" type="submit">Aplicar filtros</button>
+  </div>
+</form>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const form   = document.getElementById("filtros-form");
+  const unidad = document.getElementById("filtro_unidad");
+  const estado = document.getElementById("filtro_estado");
+  const zona   = document.getElementById("filtro_zona");
+
+  // Cargar combos
+  fetchFiltro();
+
+  unidad.addEventListener("change", fetchFiltro);
+  estado.addEventListener("change", fetchFiltro);
+
+  function fetchFiltro() {
+    const params = new URLSearchParams({
+      tabla: "{{ tabla_ajax }}",
+      unidad_operativa: unidad.value,
+      estado: estado.value
+    });
+
+    fetch(`/api/filtros_generales/?${params}`)
+      .then(r => r.json())
+      .then(data => {
+        if ("estados" in data) actualizarSelect(estado, data.estados);
+        if ("zonas" in data)   actualizarSelect(zona, data.zonas);
+      });
+  }
+
+  function actualizarSelect(select, opciones) {
+    const valActual = select.value;
+    select.innerHTML = '<option value="">-- Todas --</option>';
+    opciones.forEach(op => {
+      const opt = document.createElement("option");
+      opt.value = op;
+      opt.textContent = op;
+      if (op === valActual) opt.selected = true;
+      select.appendChild(opt);
+    });
+  }
+});
+</script>

@@ -1,0 +1,337 @@
+{% extends "fertilizantes/base.html" %}
+{% load static %}
+
+{% block content %}
+
+<h3 class="mb-3">🚚 Consulta de Fletes</h3>
+
+<div class="row g-3">
+  <!-- Encadenados -->
+  <div class="col-md-3">
+    <label class="form-label">Unidad operativa</label>
+    <select id="f_unidad" class="form-select">
+      <option value="">-- Todas --</option>
+    </select>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">Estado</label>
+    <select id="f_estado" class="form-select">
+      <option value="">-- Todos --</option>
+    </select>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">Zona operativa</label>
+    <select id="f_zona" class="form-select">
+      <option value="">-- Todas --</option>
+    </select>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">ID CEDA Agricultura</label>
+    <input id="f_ceda" class="form-control" list="list_cedas" placeholder="Escribe ID CEDA…">
+    <datalist id="list_cedas"></datalist>
+  </div>
+
+  <!-- Otros filtros -->
+  <div class="col-md-3">
+    <label class="form-label">Estatus</label>
+    <select id="f_estatus" class="form-select"><option value="">-- Todos --</option></select>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">Producto (abreviación)</label>
+    <select id="f_prod" class="form-select"><option value="">-- Todos --</option></select>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">CDF destino (original)</label>
+    <select id="f_cdf_o" class="form-select"><option value="">-- Todos --</option></select>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">CDF destino (final)</label>
+    <select id="f_cdf_f" class="form-select"><option value="">-- Todos --</option></select>
+  </div>
+
+  <!-- Rango de fechas -->
+  <div class="col-md-3">
+    <label class="form-label">Fecha salida (inicio)</label>
+    <input id="f_fs_ini" type="date" class="form-control">
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">Fecha salida (fin)</label>
+    <input id="f_fs_fin" type="date" class="form-control">
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">Fecha entrega (inicio)</label>
+    <input id="f_fe_ini" type="date" class="form-control">
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">Fecha entrega (fin)</label>
+    <input id="f_fe_fin" type="date" class="form-control">
+  </div>
+
+  <!-- Lista de folios -->
+  <div class="col-12">
+    <label class="form-label">Lista de folios del flete (uno por línea o separados por coma)</label>
+    <textarea id="f_folios" class="form-control" rows="3" placeholder="Ejemplo: 2025-000123&#10;2025-000456"></textarea>
+  </div>
+</div>
+
+<hr class="my-3">
+
+<!-- Columnas a mostrar -->
+<div class="d-flex align-items-center mb-2">
+  <h5 class="me-3 mb-0">Columnas a mostrar</h5>
+  <button type="button" class="btn btn-sm btn-outline-primary me-2" id="btn_sel_all">Seleccionar todos</button>
+  <button type="button" class="btn btn-sm btn-outline-secondary" id="btn_unsel_all">Desmarcar todos</button>
+</div>
+<div class="border rounded p-2" style="max-height: 220px; overflow:auto;">
+  {% for col in columnas %}
+  <div class="form-check form-check-inline me-3">
+    <input class="form-check-input col-chk" type="checkbox" id="col_{{ col }}" value="{{ col }}" checked>
+    <label class="form-check-label" for="col_{{ col }}">{{ col }}</label>
+  </div>
+  {% endfor %}
+  {% if not mv_tiene_columnas %}
+  <div class="alert alert-warning mt-2 mb-0">
+    No pude leer columnas de la vista "{{ matview }}". Revisa que exista y tenga permisos.
+  </div>
+  {% endif %}
+</div>
+
+<div class="mt-3 d-flex gap-2">
+  <button id="btn_consultar" class="btn btn-success">Consultar</button>
+  <button id="btn_csv" class="btn btn-outline-primary">Descargar CSV</button>
+</div>
+
+<!-- Resultados -->
+<div class="mt-3">
+  <div class="small text-muted" id="lbl_total">Sin resultados…</div>
+  <div class="table-responsive" style="max-height:480px; overflow-y:auto; overflow-x:auto;">
+    <table class="table table-sm table-striped table-hover align-middle" id="tbl">
+      <thead></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+
+<style>
+  /* evita el wrap en celdas; permite scroll horizontal */
+  #tbl th, #tbl td { white-space: nowrap; }
+</style>
+
+
+<script>
+(function(){
+  const $ = (q)=>document.querySelector(q);
+  const qsAll = (q)=>Array.from(document.querySelectorAll(q));
+
+  // ---- CSRF para POST ----
+  function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
+  }
+  const csrftoken = getCookie('csrftoken');
+
+  const selects = {
+    unidad: $("#f_unidad"),
+    estado: $("#f_estado"),
+    zona: $("#f_zona"),
+    ceda: $("#f_ceda"),
+    estatus: $("#f_estatus"),
+    prod: $("#f_prod"),
+    cdf_o: $("#f_cdf_o"),
+    cdf_f: $("#f_cdf_f"),
+  };
+
+  function currentFilters(){
+    return {
+      unidad_operativa: selects.unidad.value || null,
+      estado: selects.estado.value || null,
+      zona_operativa: selects.zona.value || null,
+      id_ceda_agricultura: selects.ceda.value || null,
+      estatus: selects.estatus.value || null,
+      abreviacion_producto: selects.prod.value || null,
+      cdf_destino_original: selects.cdf_o.value || null,
+      cdf_destino_final: selects.cdf_f.value || null,
+      fecha_salida_ini: $("#f_fs_ini").value || null,
+      fecha_salida_fin: $("#f_fs_fin").value || null,
+      fecha_entrega_ini: $("#f_fe_ini").value || null,
+      fecha_entrega_fin: $("#f_fe_fin").value || null,
+      folios_multiline: $("#f_folios").value || null,
+    };
+  }
+
+  function sanitize(obj){
+    // elimina campos vacíos / 'null' / 'undefined'
+    const out = {};
+    Object.keys(obj).forEach(k=>{
+      const v = obj[k];
+      if (v === null || v === undefined) return;
+      if (typeof v === 'string' && v.trim() === '') return;
+      if (typeof v === 'string' && ['null','undefined'].includes(v.trim().toLowerCase())) return;
+      out[k] = v;
+    });
+    return out;
+  }
+
+  function loadOptions(){
+    const params = new URLSearchParams(sanitize(currentFilters()));
+    fetch("{% url 'api_fletes_opciones' %}?"+params.toString(), {
+      headers: { 'Accept': 'application/json' }
+    })
+      .then(r => r.json())
+      .then(data=>{
+        function fill(sel, arr){
+          const prev = sel.value;
+          sel.innerHTML = '<option value="">-- Todos --</option>' +
+            (arr||[]).map(v=>`<option value="${v}">${v}</option>`).join('');
+          if ([...sel.options].some(o=>o.value===prev)) sel.value = prev;
+        }
+        fill(selects.unidad, data.unidad_operativa);
+        fill(selects.estado, data.estado);
+        fill(selects.zona, data.zona_operativa);
+
+        // 👉 NUEVO: datalist para CEDA (reemplaza el fill anterior)
+        const dl = document.getElementById('list_cedas');
+        dl.innerHTML = (data.id_ceda_agricultura || [])
+          .map(v => `<option value="${v}"></option>`)
+          .join('');
+
+        fill(selects.estatus, data.estatus);
+        fill(selects.prod, data.abreviacion_producto);
+        fill(selects.cdf_o, data.cdf_destino_original);
+        fill(selects.cdf_f, data.cdf_destino_final);
+      })
+      .catch(err=>{
+        console.error('Error cargando opciones:', err);
+      });
+  }
+
+  // Encadenamiento básico
+  ["change"].forEach(ev=>{
+    selects.unidad.addEventListener(ev, loadOptions);
+    selects.estado.addEventListener(ev, loadOptions);
+    selects.zona.addEventListener(ev, loadOptions);
+  });
+
+  // Primera carga
+  loadOptions();
+
+  // Seleccionar / desmarcar todos
+  $("#btn_sel_all").onclick = ()=> qsAll(".col-chk").forEach(c=>c.checked=true);
+  $("#btn_unsel_all").onclick = ()=> qsAll(".col-chk").forEach(c=>c.checked=false);
+
+  function columnasSeleccionadas(){
+    return qsAll(".col-chk:checked").map(c=>c.value);
+  }
+
+  function pintarTabla(cols, rows){
+    const th = cols.map(c=>`<th>${c}</th>`).join("");
+    $("#tbl thead").innerHTML = `<tr>${th}</tr>`;
+    const body = rows.map(r=>`<tr>${r.map(v=>`<td>${v===null?"":v}</td>`).join("")}</tr>`).join("");
+    $("#tbl tbody").innerHTML = body || "";
+    $("#lbl_total").textContent = rows.length ? (`${rows.length.toLocaleString()} registros`) : "Sin resultados…";
+  }
+
+  $("#btn_consultar").onclick = ()=>{
+    const payload = {...sanitize(currentFilters()), columnas: columnasSeleccionadas()};
+    fetch("{% url 'api_fletes_consultar' %}", {
+      method: "POST",
+      headers: {
+        "Content-Type":"application/json",
+        "X-CSRFToken": csrftoken,
+        "Accept": "application/json"
+      },
+      body: JSON.stringify(payload)
+    })
+    .then(r=> {
+      if (!r.ok) throw new Error('HTTP '+r.status);
+      return r.json();
+    })
+    .then(d=>{
+      pintarTabla(d.columns || [], d.rows || []);
+      // 🔽 NUEVO: pintar el resumen con DAP/UREA y sumas
+      pintarResumen(d.summary || null);
+    })
+    .catch(err=>{
+      console.error('Error en consultar:', err);
+      alert('Ocurrió un problema al consultar. Revisa la consola.');
+    });
+  };
+
+  $("#btn_csv").onclick = ()=>{
+    const payload = {...sanitize(currentFilters()), columnas: columnasSeleccionadas()};
+    fetch("{% url 'api_fletes_exportar_csv' %}", {
+      method: "POST",
+      headers: {
+        "Content-Type":"application/json",
+        "X-CSRFToken": csrftoken
+      },
+      body: JSON.stringify(payload)
+    })
+    .then(resp => {
+      if (!resp.ok) throw new Error('HTTP '+resp.status);
+      return resp.blob();
+    })
+    .then(blob => {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "fletes_consulta.csv";
+      a.click();
+      window.URL.revokeObjectURL(url);
+    })
+    .catch(err=>{
+      console.error('Error en exportar CSV:', err);
+      alert('No se pudo descargar el CSV. Revisa la consola.');
+    });
+  };
+
+})();
+</script>
+
+
+<script>
+(function(){
+  const $ = (q)=>document.querySelector(q);
+  const qsAll = (q)=>Array.from(document.querySelectorAll(q));
+
+  // ... (todo lo existente)
+
+  function num(n){
+    if (n === null || n === undefined) return "0";
+    try { return Number(n).toLocaleString(); } catch(_){ return String(n); }
+  }
+
+  // 🔽🔽🔽 NUEVO
+  function pintarResumen(summary){
+    // fallback si no vino el bloque
+    if (!summary) {
+      $("#lbl_total").textContent = "Sin resultados…";
+      return;
+    }
+    const tot = num(summary.total);
+    const sumIniTot  = num(summary.sum_toneladas_iniciales);
+    const sumDestTot = num(summary.sum_toneladas_en_el_destino);
+
+    const dap = summary.DAP || {};
+    const urea = summary.UREA || {};
+
+    const s = [
+      `<strong>${tot}</strong> registros`,
+      `• DAP: <strong>${num(dap.count||0)}</strong>`,
+      `• UREA: <strong>${num(urea.count||0)}</strong>`,
+      `<br>Σ toneladas — salida: <strong>${sumIniTot}</strong> t`,
+      `| destino: <strong>${sumDestTot}</strong> t`,
+      `<br>DAP — salida: <strong>${num(dap.sum_toneladas_iniciales||0)}</strong> t`,
+      `| destino: <strong>${num(dap.sum_toneladas_en_el_destino||0)}</strong> t`,
+      `<br>UREA — salida: <strong>${num(urea.sum_toneladas_iniciales||0)}</strong> t`,
+      `| destino: <strong>${num(urea.sum_toneladas_en_el_destino||0)}</strong> t`
+    ].join(" ");
+    $("#lbl_total").innerHTML = s;
+  }
+  // 🔼🔼🔼 FIN NUEVO
+
+
+{% endblock %}

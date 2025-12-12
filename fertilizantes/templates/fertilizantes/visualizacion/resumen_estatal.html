@@ -1,0 +1,166 @@
+{% extends "fertilizantes/base.html" %}
+{% load static %}
+
+{% block title %}Resumen Estatal{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* 🎨 Colores para las secciones del encabezado */
+  .bg-abasto { background-color: #002f2a !important; color: white; }
+  .bg-entregado { background-color: #1e5b4f !important; color: white; }
+  .bg-dh { background-color: #611232 !important; color: white; }
+  .bg-superficie { background-color: #a57f2c !important; color: white; }
+
+  /* 🎨 Colores para texto de encabezado */
+  .bg-abasto,
+  .bg-entregado,
+  .bg-dh,
+  .bg-superficie {
+    color: white !important;
+  }
+
+  /* Alinear nombres de estados */
+  #tabla_estados td.estado {
+    text-align: left;
+    padding-left: 0.75rem;
+	font-weight: bold; /* ✅ Negrita */
+  }
+
+  #tabla_estados thead th {
+    color: white !important;
+  }
+
+  /* ✏️ Ajustes generales para celdas */
+  #tabla_estados th,
+  #tabla_estados td {
+    font-size: 0.65rem;
+    vertical-align: middle;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-top: 0.2rem;
+    padding-bottom: 0.2rem;
+  }
+
+  /* 🧱 Ancho fijo por tipo de columna */
+  #tabla_estados th.estado,
+  #tabla_estados td.estado {
+    width: 130px;
+  }
+
+  #tabla_estados th.meta,
+  #tabla_estados td.meta,
+  #tabla_estados th.avance,
+  #tabla_estados td.avance,
+  #tabla_estados th.pendiente,
+  #tabla_estados td.pendiente {
+    width: 70px;
+  }
+
+  #tabla_estados th.col-porcentaje,
+  #tabla_estados td.col-porcentaje {
+    width: 85px;
+    min-width: 85px;
+  }
+
+  /* 📊 Estilo de barras de progreso */
+  .progress {
+    height: 16px;
+    background-color: #e9ecef;
+    border-radius: 0 !important;        /* ⛔ Elimina redondeo Bootstrap */
+    overflow: visible !important;       /* ✅ Permite redondeo interno */
+  }
+
+  /* ✅ Estilos por tipo (color de fondo) */
+  .progress-bar.abasto { background-color: #002f2a; }
+  .progress-bar.entregado { background-color: #1e5b4f; }
+  .progress-bar.dh { background-color: #611232; }
+  .progress-bar.superficie { background-color: #a57f2c; }
+
+  /* ✅ Forma redondeada solo a la derecha con animación */
+  #tabla_estados .progress-bar {
+    border-top-left-radius: 0 !important;
+    border-bottom-left-radius: 0 !important;
+    border-top-right-radius: 4px !important;
+    border-bottom-right-radius: 4px !important;
+    height: 100%;
+	text-align: left;         /* ✅ Alineación izquierda del % */
+	padding-left: 4px;        /* ✅ Espacio interno para el número */
+    transition: width 0.4s ease-out; /* 🎞️ animación suave */
+  }
+</style>
+{% endblock %}
+
+
+
+
+
+{% block content %}
+<div class="container mt-4">
+  <h3 class="mb-4">📍 Avance del Programa por Estado</h3>
+
+  <!-- Filtros -->
+  <div class="row mb-3">
+    <div class="col-md-4">
+      <label>Unidad Operativa</label>
+      <input class="form-control" name="unidad_operativa" list="coord" id="filtro_unidad">
+      <datalist id="coord"></datalist>
+    </div>
+    <div class="col-md-4">
+      <label>Estado</label>
+      <input class="form-control" name="estado" list="estados" id="filtro_estado">
+      <datalist id="estados"></datalist>
+    </div>
+    <div class="col-md-4">
+      <label>Tipo de Meta</label>
+      <select class="form-select" id="filtro_tipo_meta">
+        <option value="operativa" selected>Metas operativas</option>
+        <option value="oficial">Metas oficiales</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Tabla de resultados -->
+  <div class="table-responsive">
+	<table class="table table-bordered table-hover text-center align-middle shadow-sm w-100" id="tabla_estados">
+	  <thead>
+	    <tr>
+	      <th rowspan="2" class="align-middle bg-secondary text-white estado">Estado</th>
+	      <th colspan="4" class="bg-abasto">Abasto Recibido (ton)</th>
+	      <th colspan="4" class="bg-entregado">Fertilizante Entregado (ton)</th>
+	      <th colspan="4" class="bg-dh">Derechohabientes Apoyados</th>
+	      <th colspan="4" class="bg-superficie">Superficie Beneficiada (ha)</th>
+	    </tr>
+	    <tr>
+	      <th class="bg-abasto meta">Meta</th>
+	      <th class="bg-abasto avance">Avance</th>
+	      <th class="bg-abasto pendiente">Pendiente</th>
+	      <th class="bg-abasto col-porcentaje">%</th>
+
+	      <th class="bg-entregado meta">Meta</th>
+	      <th class="bg-entregado avance">Avance</th>
+	      <th class="bg-entregado pendiente">Pendiente</th>
+	      <th class="bg-entregado col-porcentaje">%</th>
+
+	      <th class="bg-dh meta">Meta</th>
+	      <th class="bg-dh avance">Avance</th>
+	      <th class="bg-dh pendiente">Pendiente</th>
+	      <th class="bg-dh col-porcentaje">%</th>
+
+	      <th class="bg-superficie meta">Meta</th>
+	      <th class="bg-superficie avance">Avance</th>
+	      <th class="bg-superficie pendiente">Pendiente</th>
+	      <th class="bg-superficie col-porcentaje">%</th>
+	    </tr>
+	  </thead>
+      <tbody>
+        <!-- Se llenará dinámicamente por JavaScript -->
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/dashboards.js' %}"></script>
+{% endblock %}

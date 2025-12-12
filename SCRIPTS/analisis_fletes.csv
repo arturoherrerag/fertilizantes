@@ -1,0 +1,26 @@
+Columna,Longitud Máxima,Tipo de Dato Sugerido
+folio_del_flete,28,TEXT
+estatus,10,TEXT
+producto,18,TEXT
+abreviación producto,3,TEXT
+toneladas iniciales,4,"NUMERIC(10,2)"
+bultos iniciales,4,INTEGER
+bultos_en_destino,4,INTEGER
+ticket_bascula,9,INTEGER
+estado_procedencia,9,TEXT
+toneladas_en_el_destino,7,"NUMERIC(10,2)"
+fecha_de_salida,19,DATE
+CDF_destino_original,42,TEXT
+CDF_destino_final,42,TEXT
+fecha_de_llegada,19,DATE
+fecha_de_entrega,19,TEXT
+toneladas_con_incidentes,18,"NUMERIC(10,2)"
+estatus_de_recepcion_incidente,13,TEXT
+descripcion,114,TEXT
+destino_final,94,TEXT
+nombre_operador,40,TEXT
+telefono_operador,10,INTEGER
+placas_transporte,7,TEXT
+tipo_transporte,28,TEXT
+estado_llegada,9,TEXT
+bultos por anio,2,INTEGER

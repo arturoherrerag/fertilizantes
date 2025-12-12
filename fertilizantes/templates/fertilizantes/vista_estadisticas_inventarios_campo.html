@@ -1,0 +1,152 @@
+{% extends 'fertilizantes/base.html' %}
+{% load formatos inventario_extras %}
+
+{% block title %}Estadísticas Inventarios Campo{% endblock %}
+
+{% block content %}
+<h2>📊 Estadísticas de Inventarios – Campo</h2>
+
+{% include "fertilizantes/_filtros_generales.html" with tabla_ajax="estadisticas_inventarios_campo" %}
+
+<button id="toggle-sigap"      class="btn btn-sm btn-secondary mb-2 me-2">
+  Mostrar columnas SIGAP
+</button>
+<button id="toggle-ubicacion"  class="btn btn-sm btn-secondary mb-2 me-2">
+  Mostrar Unidad / Estado
+</button>
+<button id="toggle-diffraw"    class="btn btn-sm btn-secondary mb-2">
+  Mostrar diferencia exacta
+</button>
+
+{% if mensaje %}
+  <div class="alert alert-info my-3">{{ mensaje }}</div>
+{% endif %}
+
+{% if datos %}
+<table id="tabla-estadisticas"
+       class="table table-sm table-bordered table-hover small w-100">
+  <thead class="table-light">
+    <tr>
+      <th class="ubic w-12">Unidad<br>Op.</th>
+      <th class="ubic w-8">Estado</th>
+
+      <th class="w-8">Zona</th>
+      <th class="w-8">ID&nbsp;CEDA</th>
+      <th class="w-12">Nombre&nbsp;CEDA</th>
+      <th class="w-4">Días</th>
+      <th class="w-6">Fecha<br>Último</th>
+      <th class="w-6">DAP&nbsp;Últ. Campo</th>
+      <th class="w-6">UREA&nbsp;Últ. Campo</th>
+
+      <th class="sigap w-6">DAP&nbsp;SIGAP</th>
+      <th class="sigap w-6">UREA&nbsp;SIGAP</th>
+
+      <th class="w-6">Δ&nbsp;DAP<br>(C-S)</th>
+      <th class="w-6">Δ&nbsp;UREA<br>(C-S)</th>
+
+      <th class="diffraw w-6">Δ DAP (t)</th>
+      <th class="diffraw w-6">Δ UREA (t)</th>
+
+      <th class="w-4">¿Rep.&nbsp;Ayer?</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for f in datos %}
+    <tr>
+      <!-- Unidad / Estado (ocultos por defecto) -->
+      <td class="ubic truncate"  title="{{ f.unidad_operativa }}">{{ f.unidad_operativa }}</td>
+      <td class="ubic truncate"  title="{{ f.estado }}">{{ f.estado }}</td>
+
+      <td class="truncate" title="{{ f.zona_operativa }}">{{ f.zona_operativa }}</td>
+      <td class="truncate" title="{{ f.id_ceda_agricultura }}">{{ f.id_ceda_agricultura }}</td>
+      <td class="truncate" title="{{ f.nombre_cedas }}">{{ f.nombre_cedas }}</td>
+      <td class="text-end">{{ f.dias_reportados }}</td>
+      <td>{{ f.fecha_ultimo_reporte|date:"d/m/Y" }}</td>
+      <td class="text-end">{{ f.inventario_dap_ultimo|formato_mx:3 }}</td>
+      <td class="text-end">{{ f.inventario_urea_ultimo|formato_mx:3 }}</td>
+
+      <!-- SIGAP -->
+      <td class="sigap text-end">{{ f.dap_sigap|formato_mx:3 }}</td>
+      <td class="sigap text-end">{{ f.urea_sigap|formato_mx:3 }}</td>
+
+      <!-- Dif. categorizada -->
+      <td class="text-end {% if f.dap_campo_vs_sigap > 0 %}diff-pos{% elif f.dap_campo_vs_sigap < 0 %}diff-neg{% endif %}">
+        {{ f.dap_campo_vs_sigap|diff_cat }}
+      </td>
+      <td class="text-end {% if f.urea_campo_vs_sigap > 0 %}diff-pos{% elif f.urea_campo_vs_sigap < 0 %}diff-neg{% endif %}">
+        {{ f.urea_campo_vs_sigap|diff_cat }}
+      </td>
+
+      <!-- Dif. numérica (oculta por defecto) -->
+      <td class="diffraw text-end {% if f.dap_campo_vs_sigap > 0 %}diff-pos{% elif f.dap_campo_vs_sigap < 0 %}diff-neg{% endif %}">
+        {{ f.dap_campo_vs_sigap|formato_mx:3 }}
+      </td>
+      <td class="diffraw text-end {% if f.urea_campo_vs_sigap > 0 %}diff-pos{% elif f.urea_campo_vs_sigap < 0 %}diff-neg{% endif %}">
+        {{ f.urea_campo_vs_sigap|formato_mx:3 }}
+      </td>
+
+      <td {% if not f.reporto_ayer %}style="color:red;"{% endif %}>
+        {{ f.reporto_ayer|yesno:"✅,❌" }}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+<style>
+  #tabla-estadisticas { font-size:.70rem; table-layout:fixed; }
+
+  #tabla-estadisticas th{
+      padding:.20rem .3rem!important; white-space:nowrap; overflow:hidden;
+      text-overflow:ellipsis; text-align:center; vertical-align:middle;
+  }
+  #tabla-estadisticas td{
+      padding:.20rem .3rem!important; white-space:nowrap; overflow:hidden;
+      text-overflow:ellipsis;
+  }
+
+  .w-4{width:4%}.w-6{width:6%}.w-8{width:8%}.w-12{width:12%}
+  .oculto{display:none!important}
+
+  .diff-pos{background:#fff3cd!important;color:#7a5200!important;font-weight:bold}
+  .diff-neg{background:#f8d7da!important;color:#c30000!important;font-weight:bold}
+  .truncate{cursor:help}
+</style>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  /* --- SIGAP ---------------------------------------------------- */
+  const btnSigap   = document.getElementById("toggle-sigap");
+  const sigapCells = document.querySelectorAll(".sigap");
+  let sigapVisible = false;
+  toggle(sigapCells,sigapVisible);
+  btnSigap.addEventListener("click",()=>switchView(sigapCells,'SIGAP',btnSigap));
+
+  /* --- Unidad / Estado ----------------------------------------- */
+  const btnUbic   = document.getElementById("toggle-ubicacion");
+  const ubicCells = document.querySelectorAll(".ubic");
+  let ubicVisible = false;                  /* ocultos por defecto */
+  toggle(ubicCells,ubicVisible);
+  btnUbic.addEventListener("click",()=>switchView(ubicCells,'Unidad / Estado',btnUbic,true));
+
+  /* --- Diferencia numérica ------------------------------------- */
+  const btnDiff   = document.getElementById("toggle-diffraw");
+  const diffCells = document.querySelectorAll(".diffraw");
+  let diffVisible = false;                  /* ocultos por defecto */
+  toggle(diffCells,diffVisible);
+  btnDiff.addEventListener("click",()=>switchView(diffCells,'diferencia exacta',btnDiff));
+
+  /* utilidades */
+  function switchView(nodes,label,button,isReverse=false){
+      const visible = nodes[0].classList.contains("oculto");
+      toggle(nodes,visible);
+      button.textContent = (visible ^ isReverse)
+        ? "Ocultar "+label : "Mostrar "+label;
+  }
+  function toggle(nodelist,show){
+      nodelist.forEach(el=>el.classList.toggle("oculto",!show));
+  }
+});
+</script>
+{% endblock %}

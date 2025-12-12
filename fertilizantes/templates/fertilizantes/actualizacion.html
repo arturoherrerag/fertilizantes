@@ -1,0 +1,23 @@
+{% extends 'fertilizantes/base.html' %}
+
+{% block title %}Actualización de Datos{% endblock %}
+
+{% block content %}
+<h2>Centro de Actualización</h2>
+
+<form method="post">
+  {% csrf_token %}
+  <div class="d-grid gap-2 d-md-block">
+    <button type="submit" name="actualizar_todo" class="btn btn-success mb-3 me-2">Actualizar Todo</button>
+    <button type="submit" name="integrar_informe" class="btn btn-primary mb-3">Integrar Informe</button>
+  </div>
+</form>
+
+{% if mensaje %}
+  <div class="card p-3 mt-3" style="background-color: #e8faff;">
+    <h5 class="mb-3">📋 Bitácora de ejecución:</h5>
+    <pre style="white-space: pre-wrap; font-family: monospace;">{{ mensaje }}</pre>
+  </div>
+{% endif %}
+{% endblock %}
+

@@ -1,0 +1,27 @@
+{% extends 'fertilizantes/base.html' %}
+{% block title %}Resumen Remanentes por Estado{% endblock %}
+{% block content %}
+<h2>📦 Resumen de Remanentes por Unidad Operativa y Estado</h2>
+<div class="table-responsive mt-4">
+  <table class="table table-bordered table-hover">
+    <thead style="background-color: #e0e0e0;">
+      <tr>
+        <th>Unidad Operativa</th><th>Estado</th>
+        <th>DAP Entrada</th><th>UREA Entrada</th>
+        <th>DAP Salida</th><th>UREA Salida</th>
+        <th>DAP Inventario</th><th>UREA Inventario</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for fila in datos %}
+      <tr>
+        <td>{{ fila.unidad_operativa }}</td><td>{{ fila.estado }}</td>
+        <td>{{ fila.dap_remanente_entrada }}</td><td>{{ fila.urea_remanente_entrada }}</td>
+        <td>{{ fila.dap_remanente_salida }}</td><td>{{ fila.urea_remanente_salida }}</td>
+        <td>{{ fila.dap_remanente_inventario }}</td><td>{{ fila.urea_remanente_inventario }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

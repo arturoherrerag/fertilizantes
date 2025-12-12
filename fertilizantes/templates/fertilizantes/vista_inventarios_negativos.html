@@ -1,0 +1,52 @@
+{% extends 'fertilizantes/base.html' %}
+
+{% block title %}Inventarios Negativos por CEDA{% endblock %}
+
+{% block content %}
+<h2>📉 CEDAs con Inventarios Negativos por Día</h2>
+
+<div class="table-responsive mt-4">
+<table class="table table-bordered table-hover" style="width: 100%;">
+    <thead style="background-color: #e0e0e0;">
+        <tr>
+            <th>Fecha</th>
+            <th>Unidad Operativa</th>
+            <th>Estado</th>
+			<th>Zona Operativa</th>
+            <th>ID CEDA Agricultura</th>
+            <th>Nombre del CEDA</th>
+            <th>DAP Total Entrada (ton)</th>
+            <th>UREA Total Entrada (ton)</th>
+            <th>DAP Total Salida (ton)</th>
+            <th>UREA Total Salida (ton)</th>				
+            <th>DAP Inventario Acumulado (ton)</th>
+            <th>UREA Inventario Acumulado (ton)</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for fila in datos %}
+        <tr>
+            <td>{{ fila.fecha|date:"d/m/Y" }}</td>
+			<td>{{ fila.unidad_operativa }}</td>
+			<td>{{ fila.estado }}</td>
+			<td>{{ fila.zona_operativa }}</td>
+            <td>{{ fila.id_ceda_agricultura }}</td>
+            <td>{{ fila.nombre_ceda }}</td>
+            <td>{{ fila.dap_total_entrada }}</td>
+            <td>{{ fila.urea_total_entrada }}</td>
+            <td>{{ fila.dap_total_salida }}</td>
+            <td>{{ fila.urea_total_salida }}</td>
+            
+            {# Mostrar en rojo si es negativo #}
+            <td {% if fila.dap_inventario < 0 %}style="color: red;"{% endif %}>
+                {{ fila.dap_inventario }}
+            </td>
+            <td {% if fila.urea_inventario < 0 %}style="color: red;"{% endif %}>
+                {{ fila.urea_inventario }}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock %}

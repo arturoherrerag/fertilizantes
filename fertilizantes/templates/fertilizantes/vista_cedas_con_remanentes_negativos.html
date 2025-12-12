@@ -1,0 +1,109 @@
+{% extends 'fertilizantes/base.html' %}
+{% load formatos %}
+{% block title %}CEDAs con Inventario Negativo de Remanente{% endblock %}
+{% block content %}
+
+<h2>📉 CEDAs con Inventario Negativo de Remanente</h2>
+
+<form method="get" class="row g-3 mb-4" id="filtros-form">
+  <div class="col-md-4">
+    <label for="unidad_operativa">Unidad Operativa:</label>
+    <select name="unidad_operativa" id="unidad_operativa" class="form-select">
+      <option value="">-- Todas --</option>
+      {% for u in unidades %}
+        <option value="{{ u }}" {% if u == unidad_seleccionada %}selected{% endif %}>{{ u }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-4">
+    <label for="estado">Estado:</label>
+    <select name="estado" id="estado" class="form-select">
+      <option value="">-- Todos --</option>
+      {% for e in estados %}
+        <option value="{{ e }}" {% if e == estado_seleccionado %}selected{% endif %}>{{ e }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-4">
+    <label for="zona_operativa">Zona Operativa:</label>
+    <select name="zona_operativa" id="zona_operativa" class="form-select">
+      <option value="">-- Todas --</option>
+      {% for z in zonas %}
+        <option value="{{ z }}" {% if z == zona_seleccionada %}selected{% endif %}>{{ z }}</option>
+      {% endfor %}
+    </select>
+  </div>
+</form>
+
+<!-- Botón para aplicar filtros -->
+<div class="mb-4">
+  <button type="submit" form="filtros-form" class="btn btn-primary">Aplicar Filtros</button>
+</div>
+
+<div class="table-responsive mt-4">
+  <table class="table table-bordered table-hover">
+    <thead style="background-color: #e0e0e0;">
+      <tr>
+        <th>Estado</th>
+        <th>Unidad Operativa</th>
+        <th>Zona Operativa</th>
+        <th>ID CEDA Agricultura</th>
+        <th>Nombre del CEDA</th>
+        <th>DAP Inventario Remanente</th>
+        <th>UREA Inventario Remanente</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for fila in datos %}
+      <tr>
+        <td>{{ fila.estado }}</td>
+        <td>{{ fila.coordinacion_estatal }}</td>
+        <td>{{ fila.zona_operativa }}</td>
+        <td>{{ fila.id_ceda_agricultura }}</td>
+        <td>{{ fila.nombre_cedas }}</td>
+        <td {% if fila.dap_ton_remanente_inventario < 0 %}style="color:red;"{% endif %}>
+          {{ fila.dap_ton_remanente_inventario|formato_mx:3 }}
+        </td>
+        <td {% if fila.urea_ton_remanente_inventario < 0 %}style="color:red;"{% endif %}>
+          {{ fila.urea_ton_remanente_inventario|formato_mx:3 }}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Filtros dependientes -->
+<script>
+  const urlFiltros = "{% url 'ajax_filtros_generales' %}";
+  const tabla = "cedas_con_remanentes_negativos_2025";
+
+  const unidadSelect = document.getElementById("unidad_operativa");
+  const estadoSelect = document.getElementById("estado");
+  const zonaSelect = document.getElementById("zona_operativa");
+
+  unidadSelect.addEventListener('change', () => {
+    fetch(`${urlFiltros}?unidad_operativa=${unidadSelect.value}&tabla=${tabla}`)
+      .then(res => res.json())
+      .then(data => {
+        estadoSelect.innerHTML = '<option value="">-- Todos --</option>';
+        data.estados.forEach(e => {
+          estadoSelect.innerHTML += `<option value="${e}">${e}</option>`;
+        });
+        zonaSelect.innerHTML = '<option value="">-- Todas --</option>';
+      });
+  });
+
+  estadoSelect.addEventListener('change', () => {
+    fetch(`${urlFiltros}?estado=${estadoSelect.value}&unidad_operativa=${unidadSelect.value}&tabla=${tabla}`)
+      .then(res => res.json())
+      .then(data => {
+        zonaSelect.innerHTML = '<option value="">-- Todas --</option>';
+        data.zonas.forEach(z => {
+          zonaSelect.innerHTML += `<option value="${z}">${z}</option>`;
+        });
+      });
+  });
+</script>
+
+{% endblock %}

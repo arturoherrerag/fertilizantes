@@ -1,0 +1,26 @@
+{% extends 'fertilizantes/base.html' %}
+
+{% block title %}Reporte Entregas Nacionales{% endblock %}
+
+{% block content %}
+<h2>Entregas Nacionales</h2>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            {% for columna in datos.0.keys %}
+                <th>{{ columna }}</th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for fila in datos %}
+        <tr>
+            {% for valor in fila.values %}
+            <td>{{ valor }}</td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

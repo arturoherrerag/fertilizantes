@@ -1,0 +1,54 @@
+CREATE MATERIALIZED VIEW IF NOT EXISTS mv_meta_vs_avance_diario_ceda_estatus_2025 AS
+WITH metas AS (
+  SELECT * FROM mv_metas_ceda_estatus_2025
+),
+avances AS (
+  SELECT * FROM mv_avances_diarios_ceda_estatus_2025
+)
+SELECT
+  a.unidad_operativa,
+  a.estado,
+  a.zona_operativa,
+  a.id_ceda_agricultura,
+  a.nombre_cedas,
+  a.estatus,
+  a.incorporacion,
+  a.fecha,
+
+  -- Metas (constantes por CEDA+estatus)
+  m.meta_dh,
+  m.meta_superficie,
+  m.meta_dap_ton,
+  m.meta_urea_ton,
+  m.meta_total_ton,
+
+  -- Avances del día
+  a.avance_dh,
+  a.avance_superficie,
+  a.avance_dap_ton,
+  a.avance_urea_ton,
+  a.avance_total_ton,
+
+  -- Avances acumulados YTD por CEDA+estatus
+  SUM(a.avance_dh)         OVER (PARTITION BY a.id_ceda_agricultura, a.estatus ORDER BY a.fecha ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS avance_dh_acum,
+  SUM(a.avance_superficie) OVER (PARTITION BY a.id_ceda_agricultura, a.estatus ORDER BY a.fecha ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS avance_superficie_acum,
+  SUM(a.avance_dap_ton)    OVER (PARTITION BY a.id_ceda_agricultura, a.estatus ORDER BY a.fecha ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS avance_dap_ton_acum,
+  SUM(a.avance_urea_ton)   OVER (PARTITION BY a.id_ceda_agricultura, a.estatus ORDER BY a.fecha ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS avance_urea_ton_acum,
+  SUM(a.avance_total_ton)  OVER (PARTITION BY a.id_ceda_agricultura, a.estatus ORDER BY a.fecha ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS avance_total_ton_acum,
+
+  -- % avance (acumulado) vs meta
+  CASE WHEN m.meta_dh > 0
+       THEN ROUND(100.0 * (SUM(a.avance_dh) OVER (PARTITION BY a.id_ceda_agricultura, a.estatus ORDER BY a.fecha ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW))::numeric / m.meta_dh, 2)
+       ELSE 0 END AS avance_pct_dh_acum,
+  CASE WHEN m.meta_total_ton > 0
+       THEN ROUND(100.0 * (SUM(a.avance_total_ton) OVER (PARTITION BY a.id_ceda_agricultura, a.estatus ORDER BY a.fecha ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW))::numeric / m.meta_total_ton, 2)
+       ELSE 0 END AS avance_pct_ton_acum
+
+FROM avances a
+LEFT JOIN metas m
+  ON m.id_ceda_agricultura = a.id_ceda_agricultura
+ AND m.estatus             = a.estatus
+ORDER BY estado, unidad_operativa, zona_operativa, id_ceda_agricultura, estatus, fecha;
+
+CREATE INDEX IF NOT EXISTS ix_mv_meta_vs_avance_diario_keys
+  ON mv_meta_vs_avance_diario_ceda_estatus_2025 (fecha, id_ceda_agricultura, estado, unidad_operativa, zona_operativa, estatus, incorporacion);

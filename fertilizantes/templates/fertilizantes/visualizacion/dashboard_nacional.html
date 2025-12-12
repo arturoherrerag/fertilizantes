@@ -1,0 +1,112 @@
+{% extends 'fertilizantes/base.html' %}
+{% load static %}
+
+{% block title %}Visualización - Avance Nacional{% endblock %}
+
+{% block content %}
+
+<style>
+  .card.border-abasto { border-top: 16px solid #004634; }
+  .card.border-entregado { border-top: 16px solid #146B4D; }
+  .card.border-dh { border-top: 16px solid #6A1B3F; }
+  .card.border-superficie { border-top: 16px solid #A1760E; }
+</style>
+
+<h2 class="mb-4">Avance Nacional 2025</h2>
+
+<!-- Filtros -->
+<form id="filtros-form" class="row g-3 mb-4">
+  <div class="col-12 col-md-3">
+    <label class="form-label">Fuente de metas:</label>
+    <select name="tipo_meta" id="tipo_meta" class="form-select">
+      <option value="operativa" selected>Metas operativas</option>
+      <option value="oficial">Metas oficiales</option>
+    </select>
+  </div>
+
+  <div class="col-12 col-md-3">
+    <label class="form-label">Unidad Operativa:</label>
+    <select name="unidad_operativa" id="unidad_operativa" class="form-select">
+      <option value="">-- Todas --</option>
+    </select>
+  </div>
+
+  <div class="col-12 col-md-3">
+    <label class="form-label">Estado:</label>
+    <select name="estado" id="estado" class="form-select">
+      <option value="">-- Todos --</option>
+    </select>
+  </div>
+
+  <div class="col-12 col-md-3">
+    <label class="form-label">ID CEDA:</label>
+    <input type="text" name="id_ceda" id="id_ceda" class="form-control" placeholder="ej. MAS-4120">
+  </div>
+
+  <div class="col-12 col-md-3 d-grid">
+    <button type="submit" class="btn btn-success mt-md-4">🔍 Filtrar</button>
+  </div>
+</form>
+
+<!-- Tarjetas KPI -->
+<div class="row" id="kpi-cards"></div>
+
+<!-- Notas -->
+<details class="mt-4">
+  <summary class="fw-bold">Notas metodológicas</summary>
+  <ul class="mt-2">
+    <li>Las metas nacionales provienen del padrón 2025 validado por DGIDTE.</li>
+    <li>La fuente de avance es la vista <code>avance_operativo_ceda_2025</code> actualizada diariamente.</li>
+  </ul>
+</details>
+
+{% endblock %}
+
+{% block extra_js %}
+<style>
+  .kpi-header {
+    font-size: 1.08rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: white;
+    padding: 8px 0;
+  }
+
+  .bg-abasto { background-color: #004634; }
+  .bg-entregado { background-color: #146B4D; }
+  .bg-dh { background-color: #6A1B3F; }
+  .bg-superficie { background-color: #A1760E; }
+
+  .kpi-titulo {
+    font-size: 1.00rem;
+    font-weight: 700;
+    color: #333;
+    text-transform: uppercase;
+    margin-bottom: 0.25rem;
+  }
+
+  .kpi-meta {
+    font-size: 1.4rem;
+    color: #888;
+  }
+
+  .kpi-pendiente {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #000;
+    margin-bottom: 0.95rem;
+  }
+
+  .donut-label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2.6rem;
+    font-weight: 700;
+  }
+</style>
+
+<script src="{% static 'js/chart.umd.min.js' %}"></script>
+<script src="{% static 'js/dashboards.js' %}?v={{ timestamp }}"></script>
+{% endblock %}

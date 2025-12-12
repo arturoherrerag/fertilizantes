@@ -1,0 +1,67 @@
+{% extends 'fertilizantes/base.html' %}
+{% load formatos %}
+
+{% block title %}Fletes con Diferencias Atípicas en Toneladas{% endblock %}
+
+{% block content %}
+<h2>⚠️ Fletes con Diferencias Atípicas en Toneladas Recibidas</h2>
+<p>Casos donde la diferencia entre toneladas iniciales y recibidas supera +10 o es menor a -1.</p>
+
+<style>
+.texto-limitado {
+    max-width: 750px;
+    max-height: 4.5em;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-size: 0.88rem;
+}
+</style>
+
+<div class="table-responsive mt-4">
+  <table class="table table-bordered table-hover">
+    <thead class="table-light">
+      <tr>
+        <th class="text-nowrap" style="min-width: 160px;">Unidad Operativa</th>
+        <th class="text-nowrap" style="min-width: 120px;">Estado</th>
+        <th class="text-nowrap" style="min-width: 120px;">Zona</th>
+        <th class="text-nowrap" style="min-width: 180px;">ID CEDA</th>
+        <th class="text-nowrap" style="min-width: 200px;">Nombre del CEDA</th>
+        <th class="text-nowrap" style="min-width: 220px;">Folio del Flete</th>
+        <th class="text-nowrap">Producto</th>
+        <th class="text-nowrap">Tons Iniciales</th>
+        <th class="text-nowrap">Tons Recibidas</th>
+        <th class="text-nowrap">Diferencia (ton)</th>
+        <th class="text-nowrap">Fecha de Salida</th>
+        <th class="text-nowrap">Fecha de Entrega</th>
+        <th class="text-nowrap">Estatus de Recepción</th>
+        <th style="min-width: 300px;">Descripción</th>
+        <th style="min-width: 300px;">Destino Final</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for fila in datos %}
+      <tr>
+        <td class="text-nowrap">{{ fila.coordinacion_estatal }}</td>
+        <td class="text-nowrap">{{ fila.estado }}</td>
+        <td class="text-nowrap">{{ fila.zona_operativa }}</td>
+        <td class="text-nowrap">{{ fila.id_ceda_agricultura }}</td>
+        <td class="text-nowrap">{{ fila.nombre_cedas }}</td>
+        <td class="text-nowrap">{{ fila.folio_del_flete }}</td>
+        <td class="text-nowrap">{{ fila.abreviacion_producto }}</td>
+        <td class="text-nowrap">{{ fila.toneladas_iniciales|formato_mx:3 }}</td>
+        <td class="text-nowrap">{{ fila.toneladas_en_el_destino|formato_mx:3 }}</td>
+        <td class="text-nowrap" style="font-weight: bold; {% if fila.diferencia_ton > 10 or fila.diferencia_ton < -1 %}color: red;{% endif %}">
+          {{ fila.diferencia_ton|formato_mx:3 }}
+        </td>
+        <td class="text-nowrap">{{ fila.fecha_de_salida|date:"d/m/Y" }}</td>
+        <td class="text-nowrap">{{ fila.fecha_de_entrega|date:"d/m/Y H:i" }}</td>
+        <td class="text-nowrap">{{ fila.estatus_de_recepcion_incidente }}</td>
+        <td><div class="texto-limitado">{{ fila.descripcion }}</div></td>
+        <td><div class="texto-limitado">{{ fila.destino_final }}</div></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

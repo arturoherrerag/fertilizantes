@@ -1,0 +1,41 @@
+{% extends 'fertilizantes/base.html' %}
+{% load static %}
+
+{% block title %}Visualización{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">📊 Visualización</h2>
+
+<div class="row">
+  <!-- Tarjeta 1: Avance Nacional -->
+  <div class="col-md-4 mb-4">
+    <div class="card shadow-sm h-100 border-success">
+      <div class="card-body d-flex flex-column justify-content-between">
+        <div>
+          <h5 class="card-title">Avance Nacional</h5>
+          <p class="card-text">Visualiza metas, avances y pendientes del programa a nivel nacional.</p>
+        </div>
+        <a href="{% url 'dashboard_avance' %}" class="btn btn-outline-success mt-2">Ir al tablero</a>
+      </div>
+    </div>
+  </div>
+
+
+<!-- Tarjeta 2: Avance por Estado -->
+<div class="col-md-4 mb-4">
+  <div class="card shadow-sm h-100 border-primary">
+    <div class="card-body d-flex flex-column justify-content-between">
+      <div>
+        <h5 class="card-title">Avance por Estado</h5>
+        <p class="card-text">Consulta tabla con metas, avances y entregas por entidad federativa.</p>
+      </div>
+      <a href="{% url 'resumen_estatal' %}" class="btn btn-outline-primary mt-2">Ver resumen</a>
+    </div>
+  </div>
+</div>
+
+  <!-- Puedes agregar más tarjetas aquí cuando tengamos más visualizaciones -->
+</div>
+
+{% endblock %}
+

@@ -1,0 +1,95 @@
+{#  _filtros_generales.html  #}
+<form id="filtros-form" class="row g-3 mb-3">
+  <div class="col-md-3">
+    <label class="form-label">Unidad operativa</label>
+	<select name="unidad_operativa" id="filtro_unidad" class="form-select">
+	  <option value="">-- Todas --</option>
+	  {% for u in unidades %}       {# ← viene del ctx paso 5 #}
+	    <option value="{{ u }}" {% if u == unidad_operativa_seleccionado %}selected{% endif %}>{{ u }}</option>
+	  {% endfor %}
+	</select>
+  </div>
+
+	<opt/homebrew/.git/logs/refs/remotes/origin/.origin>
+
+  <div class="col-md-3">
+    <label class="form-label">Estado</label>
+    <select name="estado" id="filtro_estado" class="form-select">
+      <option value="">-- Todos --</option>
+    </select>
+  </div>
+
+  <div class="col-md-3">
+    <label class="form-label">Zona operativa</label>
+    <select name="zona_operativa" id="filtro_zona" class="form-select">
+      <option value="">-- Todas --</option>
+    </select>
+  </div>
+
+  <div class="col-md-3">
+    <label class="form-label">ID CEDA Agricultura</label>
+    <input name="id_ceda_agricultura" id="filtro_ceda" class="form-control" placeholder="Opcional">
+  </div>
+
+  {# rango de fechas opcional #}
+  <div class="col-md-3">
+    <label class="form-label">Fecha inicio</label>
+    <input type="date" name="fecha_ini" class="form-control" value="{{ fecha_ini|default_if_none:'' }}">
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">Fecha fin</label>
+    <input type="date" name="fecha_fin" class="form-control" value="{{ fecha_fin|default_if_none:'' }}">
+  </div>
+
+  <div class="col-12 text-end">
+    <button class="btn btn-primary" type="submit">Aplicar filtros</button>
+  </div>
+</form>
+
+<script>
+/* --- Filtros dependientes vía AJAX --- */
+document.addEventListener("DOMContentLoaded", () => {
+  const form   = document.getElementById("filtros-form");
+  const unidad = document.getElementById("filtro_unidad");
+  const estado = document.getElementById("filtro_estado");
+  const zona   = document.getElementById("filtro_zona");
+
+  // Cargar opciones iniciales
+  fetchFiltro();
+
+  // recarga combos cuando cambian
+  unidad.addEventListener("change", fetchFiltro);
+  estado.addEventListener("change", fetchFiltro);
+
+  function fetchFiltro() {
+    const params = new URLSearchParams({
+      tabla: "{{ tabla_ajax }}",
+      unidad_operativa: unidad.value,
+      estado: estado.value
+    });
+
+    fetch(`/api/filtros_generales/?${params}`)
+      .then(r => r.json())
+      .then(data => {
+        if ("estados" in data) {      // siempre llega la clave
+          actualizarSelect(estado, data.estados);
+        }
+        if ("zonas" in data) {        // llega vacía o con datos
+          actualizarSelect(zona, data.zonas);
+        }
+      });
+  }
+
+  function actualizarSelect(select, opciones) {
+    const sel = select;
+    const valActual = sel.value;
+    sel.innerHTML = '<option value="">-- Todas --</option>';
+    opciones.forEach(op => {
+      const opt = document.createElement("option");
+      opt.value = op; opt.textContent = op;
+      if (op === valActual) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  }
+});
+</script>

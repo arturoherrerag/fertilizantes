@@ -1,0 +1,78 @@
+{% extends 'fertilizantes/base.html' %}
+{% load formatos %}
+
+{% block title %}Fletes por Toneladas Iniciales{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">🚛 Fletes según Toneladas Iniciales</h2>
+
+<form method="get" class="row g-3 mb-4" id="filtros-form">
+  <div class="col-md-3">
+    <label for="unidad_operativa">Unidad Operativa:</label>
+    <select name="unidad_operativa" id="unidad_operativa" class="form-select">
+      <option value="">-- Todas --</option>
+      {% for u in unidades %}
+        <option value="{{ u }}" {% if u == unidad_seleccionada %}selected{% endif %}>{{ u }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3">
+    <label for="estado">Estado:</label>
+    <select name="estado" id="estado" class="form-select">
+      <option value="">-- Todos --</option>
+      {% for e in estados %}
+        <option value="{{ e }}" {% if e == estado_seleccionado %}selected{% endif %}>{{ e }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3">
+    <label for="estado_procedencia">Estado Procedencia:</label>
+    <select name="estado_procedencia" id="estado_procedencia" class="form-select">
+      <option value="">-- Todos --</option>
+      {% for p in procedencias %}
+        <option value="{{ p }}" {% if p == procedencia_seleccionada %}selected{% endif %}>{{ p }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3">
+    <label for="buscar_ceda">Buscar por CEDA:</label>
+	<input type="text" name="buscar_ceda" value="{{ buscar_ceda|default_if_none:'' }}" class="form-control" placeholder="ID CEDA Agricultura">
+  </div>
+  <div class="col-12 d-flex justify-content-end">
+    <button type="submit" class="btn btn-primary">🔍 Aplicar Filtros</button>
+  </div>
+</form>
+
+<div class="table-responsive mt-4">
+  <table class="table table-bordered table-striped table-hover table-sm align-middle text-center">
+    <thead class="table-light">
+      <tr>
+        <th style="white-space: nowrap;">Unidad Operativa</th>
+        <th style="white-space: nowrap;">Estado</th>
+        <th style="white-space: nowrap;">Zona Operativa</th>
+        <th style="white-space: nowrap;">ID CEDA</th>
+        <th style="white-space: nowrap;">Nombre del CEDA</th>
+        <th style="white-space: nowrap;">Estado Procedencia</th>
+        <th style="white-space: nowrap;">Toneladas Iniciales</th>
+        <th style="white-space: nowrap;">Fletes DAP</th>
+        <th style="white-space: nowrap;">Fletes UREA</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for fila in datos %}
+      <tr>
+        <td style="white-space: nowrap;">{{ fila.unidad_operativa }}</td>
+        <td style="white-space: nowrap;">{{ fila.estado }}</td>
+        <td style="white-space: nowrap;">{{ fila.zona_operativa }}</td>
+        <td style="white-space: nowrap;">{{ fila.id_ceda_agricultura }}</td>
+        <td style="white-space: nowrap;">{{ fila.nombre_cedas }}</td>
+        <td style="white-space: nowrap;">{{ fila.estado_procedencia }}</td>
+        <td style="white-space: nowrap;">{{ fila.toneladas_iniciales|formato_mx:3 }}</td>
+        <td style="white-space: nowrap;">{{ fila.cantidad_fletes_dap|formato_mx }}</td>
+        <td style="white-space: nowrap;">{{ fila.cantidad_fletes_urea|formato_mx }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

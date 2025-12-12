@@ -1,0 +1,98 @@
+{% extends 'fertilizantes/base.html' %}
+{% load formatos %}
+
+{% block title %}Pedidos por Fecha{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">📦 Pedidos Desglosados por Fecha</h2>
+
+<form method="get" class="row g-3 mb-4" id="filtros-form">
+  <div class="col-md-3">
+    <label for="unidad_operativa">Unidad Operativa:</label>
+    <select name="unidad_operativa" id="unidad_operativa" class="form-select">
+      <option value="">-- Todas --</option>
+      {% for u in unidades %}
+        <option value="{{ u }}" {% if u == unidad_seleccionada %}selected{% endif %}>{{ u }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3">
+    <label for="estado">Estado:</label>
+    <select name="estado" id="estado" class="form-select">
+      <option value="">-- Todos --</option>
+      {% for e in estados %}
+        <option value="{{ e }}" {% if e == estado_seleccionado %}selected{% endif %}>{{ e }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3">
+    <label for="zona_operativa">Zona Operativa:</label>
+    <select name="zona_operativa" id="zona_operativa" class="form-select">
+      <option value="">-- Todas --</option>
+      {% for z in zonas %}
+        <option value="{{ z }}" {% if z == zona_seleccionada %}selected{% endif %}>{{ z }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3">
+    <label for="buscar_ceda">Buscar ID CEDA:</label>
+    <input type="text" name="buscar_ceda" id="buscar_ceda" class="form-control" value="{{ buscar_ceda }}">
+  </div>
+
+  <div class="col-md-3">
+    <label for="fecha_inicio">Desde (fecha):</label>
+    <input type="date" name="fecha_inicio" id="fecha_inicio" class="form-control" value="{{ fecha_inicio }}">
+  </div>
+  <div class="col-md-3">
+    <label for="fecha_fin">Hasta (fecha):</label>
+    <input type="date" name="fecha_fin" id="fecha_fin" class="form-control" value="{{ fecha_fin }}">
+  </div>
+
+  <div class="col-md-12 text-end">
+    <button type="submit" class="btn btn-primary">Filtrar</button>
+  </div>
+</form>
+
+{% if datos %}
+  <hr>
+  <div class="mb-3">
+    <strong>📊 Resumen:</strong><br>
+    Total de registros: <strong>{{ resumen.total }}</strong><br>
+    Suma DAP: <strong>{{ resumen.dap|floatformat:3 }} t</strong><br>
+    Suma UREA: <strong>{{ resumen.urea|floatformat:3 }} t</strong>
+  </div>
+{% else %}
+  {% if unidad_seleccionada or estado_seleccionado or zona_seleccionada or buscar_ceda or fecha_inicio or fecha_fin %}
+    <div class="alert alert-warning mt-4">No se encontraron registros con los filtros aplicados.</div>
+  {% endif %}
+{% endif %}
+
+<table class="table table-striped table-bordered">
+  <thead>
+    <tr>
+      <th>Unidad Operativa</th>
+      <th>Estado</th>
+      <th>Zona</th>
+      <th>ID CEDA</th>
+      <th>Nombre CEDA</th>
+      <th>Fecha</th>
+      <th>DAP (t)</th>
+      <th>UREA (t)</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in datos %}
+    <tr>
+      <td>{{ row.unidad_operativa }}</td>
+      <td>{{ row.estado }}</td>
+      <td>{{ row.zona_operativa }}</td>
+      <td>{{ row.id_ceda_agricultura }}</td>
+      <td>{{ row.nombre_cedas }}</td>
+      <td>{{ row.fecha|date:"Y-m-d" }}</td>
+      <td>{{ row.dap|floatformat:3 }}</td>
+      <td>{{ row.urea|floatformat:3 }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

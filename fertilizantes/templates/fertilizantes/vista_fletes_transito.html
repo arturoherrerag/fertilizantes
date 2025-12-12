@@ -1,0 +1,78 @@
+{% extends 'fertilizantes/base.html' %}
+{% load formatos %}
+
+{% block title %}Resumen de Fletes en Tránsito{% endblock %}
+
+{% block content %}
+<h2>Resumen de Fletes en Tránsito por Estado</h2>
+
+<hr>
+<h5>Resumen General</h5>
+<table class="table table-bordered w-auto mb-4">
+  <thead class="table-light">
+    <tr>
+      <th>Fletes DAP</th>
+      <th>Fletes UREA</th>
+      <th>Total Fletes</th>
+      <th>Toneladas DAP</th>
+      <th>Toneladas UREA</th>
+      <th>Total Toneladas</th>
+      <th>Máx. Días en Tránsito</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>{{ totales.fletes_transito_dap|formato_mx }}</td>
+      <td>{{ totales.fletes_transito_urea|formato_mx }}</td>
+      <td>{{ totales.total_fletes_transito|formato_mx }}</td>
+      <td>{{ totales.ton_transito_dap|formato_mx:2 }}</td>
+      <td>{{ totales.ton_transito_urea|formato_mx:2 }}</td>
+      <td><strong>{{ totales.total_ton_transito|formato_mx:2 }}</strong></td>
+      <td>{{ totales.max_dias_en_transito|formato_mx }}</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="table-responsive mt-4">
+<table class="table table-bordered table-hover" style="width: 100%;">
+    <thead style="background-color: #e0e0e0;">
+        <tr>
+            <th>Estado</th>
+            <th>Fletes DAP</th>
+            <th>Fletes UREA</th>
+            <th>Total Fletes</th>
+            <th>Ton DAP</th>
+            <th>Ton UREA</th>
+            <th>Total Ton</th>
+            <th>Máx. Días</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for fila in datos %}
+        <tr>
+            <td>{{ fila.estado }}</td>
+            <td>{{ fila.fletes_transito_dap|formato_mx }}</td>
+            <td>{{ fila.fletes_transito_urea|formato_mx }}</td>
+            <td>{{ fila.total_fletes_transito|formato_mx }}</td>
+            <td>{{ fila.ton_transito_dap|formato_mx:2 }}</td>
+            <td>{{ fila.ton_transito_urea|formato_mx:2 }}</td>
+            <td>{{ fila.total_ton_transito|formato_mx:2 }}</td>
+            <td>{{ fila.max_dias_en_transito|formato_mx }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+    <tfoot class="table-light">
+        <tr>
+            <th>Totales</th>
+            <th>{{ totales.fletes_transito_dap|formato_mx }}</th>
+            <th>{{ totales.fletes_transito_urea|formato_mx }}</th>
+            <th>{{ totales.total_fletes_transito|formato_mx }}</th>
+            <th>{{ totales.ton_transito_dap|formato_mx:2 }}</th>
+            <th>{{ totales.ton_transito_urea|formato_mx:2 }}</th>
+            <th>{{ totales.total_ton_transito|formato_mx:2 }}</th>
+            <th>{{ totales.max_dias_en_transito|formato_mx }}</th>
+        </tr>
+    </tfoot>
+</table>
+</div>
+{% endblock %}

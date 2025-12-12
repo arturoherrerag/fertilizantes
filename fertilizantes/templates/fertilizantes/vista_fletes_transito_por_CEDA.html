@@ -1,0 +1,156 @@
+{% extends 'fertilizantes/base.html' %}
+{% load formatos %}
+
+{% block title %}Fletes en Tránsito por CEDA{% endblock %}
+
+{% block content %}
+<h2>Fletes en Tránsito por CEDA</h2>
+
+<form method="get" class="row g-3 mb-4">
+  <div class="col-md-4">
+    <label for="unidad_operativa">Unidad Operativa:</label>
+    <select name="unidad_operativa" id="unidad_operativa" class="form-select">
+      <option value="">-- Todas --</option>
+      {% for unidad in unidades %}
+        <option value="{{ unidad }}" {% if unidad == unidad_seleccionada %}selected{% endif %}>{{ unidad }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="col-md-4">
+    <label for="estado">Estado:</label>
+    <select name="estado" id="estado" class="form-select">
+      <option value="">-- Todos --</option>
+      {% for est in estados %}
+        <option value="{{ est }}" {% if est == estado_seleccionado %}selected{% endif %}>{{ est }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="col-md-4">
+    <label for="zona_operativa">Zona Operativa:</label>
+    <select name="zona_operativa" id="zona_operativa" class="form-select">
+      <option value="">-- Todas --</option>
+      {% for zona in zonas %}
+        <option value="{{ zona }}" {% if zona == zona_seleccionada %}selected{% endif %}>{{ zona }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="col-md-12">
+    <button type="submit" class="btn btn-success mt-2">🔍 Filtrar</button>
+  </div>
+</form>
+
+<div class="table-responsive">
+  <hr>
+  <h4>Totales Generales</h4>
+  <table class="table table-bordered table-striped w-auto">
+    <thead class="table-light">
+      <tr>
+        <th>Total Fletes DAP</th>
+        <th>Total Fletes UREA</th>
+        <th>Total Fletes Tránsito</th>
+        <th>Total Ton DAP</th>
+        <th>Total Ton UREA</th>
+        <th>Total Toneladas</th>
+        <th>Máximo Días en Tránsito</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>{{ totales.fletes_dap|formato_mx }}</td>
+        <td>{{ totales.fletes_urea|formato_mx }}</td>
+        <td><strong>{{ totales.total_fletes_transito|formato_mx }}</strong></td>
+        <td>{{ totales.ton_dap|formato_mx:2 }}</td>
+        <td>{{ totales.ton_urea|formato_mx:2 }}</td>
+        <td><strong>{{ totales.ton_total|formato_mx:2 }}</strong></td>
+        <td style="font-weight: bold;">{{ totales.max_dias|formato_mx }}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <table class="table table-bordered table-hover">
+    <thead class="table-secondary">
+      <tr>
+        <th>Unidad Operativa</th>
+        <th>Estado</th>
+        <th>Zona Operativa</th>
+        <th>ID CEDA Agricultura</th>
+        <th>Nombre del CEDA</th>
+        <th>Fletes DAP Tránsito</th>
+        <th>Fletes UREA Tránsito</th>
+        <th>DAP Tránsito (ton)</th>
+        <th>UREA Tránsito (ton)</th>
+        <th>Máximo Días en Tránsito</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for fila in datos %}
+      <tr>
+        <td>{{ fila.unidad_operativa }}</td>
+        <td>{{ fila.estado }}</td>
+        <td>{{ fila.zona_operativa }}</td>
+        <td>{{ fila.id_ceda_agricultura }}</td>
+        <td>{{ fila.nombre_cedas }}</td>
+        <td>{{ fila.fletes_transito_dap|formato_mx }}</td>
+        <td>{{ fila.fletes_transito_urea|formato_mx }}</td>
+        <td>{{ fila.ton_transito_dap|formato_mx:2 }}</td>
+        <td>{{ fila.ton_transito_urea|formato_mx:2 }}</td>
+        <td style="font-weight:bold;">{{ fila.max_dias_en_transito|formato_mx }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const unidadSelect = document.getElementById('unidad_operativa');
+  const estadoSelect = document.getElementById('estado');
+  const zonaSelect = document.getElementById('zona_operativa');
+
+  function cargarEstados() {
+    const unidad = unidadSelect.value;
+    fetch(`/ajax/filtros-generales/?tabla=fletes_en_transito_resumen&unidad_operativa=${unidad}`)
+      .then(res => res.json())
+      .then(data => {
+        estadoSelect.innerHTML = '<option value="">-- Todos --</option>';
+        data.estados.forEach(est => {
+          const opt = document.createElement('option');
+          opt.value = est;
+          opt.text = est;
+          estadoSelect.appendChild(opt);
+        });
+        zonaSelect.innerHTML = '<option value="">-- Todas --</option>';
+      });
+  }
+
+  function cargarZonas() {
+    const unidad = unidadSelect.value;
+    const estado = estadoSelect.value;
+    fetch(`/ajax/filtros-generales/?tabla=fletes_en_transito_resumen&unidad_operativa=${unidad}&estado=${estado}`)
+      .then(res => res.json())
+      .then(data => {
+        zonaSelect.innerHTML = '<option value="">-- Todas --</option>';
+        data.zonas.forEach(z => {
+          const opt = document.createElement('option');
+          opt.value = z;
+          opt.text = z;
+          zonaSelect.appendChild(opt);
+        });
+      });
+  }
+
+  unidadSelect.addEventListener('change', () => {
+    cargarEstados();
+  });
+
+  estadoSelect.addEventListener('change', () => {
+    cargarZonas();
+  });
+});
+</script>
+{% endblock %}
