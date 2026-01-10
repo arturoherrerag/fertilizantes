@@ -68,3 +68,11 @@ MAPAS/mexico.json
 # Credenciales sensibles (Google Cloud) - nunca versionar
 SCRIPTS/inventarios-2025-pf-69b1417ea0df.json
 SCRIPTS/*.json
+BASES_ORIGINALES_SIGAP_2026/
+LOGS_2026/
+TABLAS_DINAMICAS_2026/
+SCRIPTS_2026/
+*.txt
+*backup*.py
+SCRIPTS/importar_remanentes_16122025.py
+SCRIPTS/importar_transferencias_16122025.py
