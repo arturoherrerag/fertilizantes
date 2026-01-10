@@ -4,104 +4,194 @@
 {% block title %}Fletes en Tránsito por CEDA{% endblock %}
 
 {% block content %}
-<h2>Fletes en Tránsito por CEDA</h2>
 
-<form method="get" class="row g-3 mb-4">
-  <div class="col-md-4">
-    <label for="unidad_operativa">Unidad Operativa:</label>
-    <select name="unidad_operativa" id="unidad_operativa" class="form-select">
-      <option value="">-- Todas --</option>
-      {% for unidad in unidades %}
-        <option value="{{ unidad }}" {% if unidad == unidad_seleccionada %}selected{% endif %}>{{ unidad }}</option>
-      {% endfor %}
-    </select>
-  </div>
+<style>
+    /* Forzar encabezado verde y texto blanco */
+    .tabla-header-institucional th {
+        background-color: #264e46 !important;
+        color: #ffffff !important;
+        border-bottom: none;
+        vertical-align: middle;
+        font-weight: 500;
+    }
+    
+    /* Fondo sutil para columnas destacadas */
+    .bg-columna-total {
+        background-color: #f2f4f4 !important;
+    }
 
-  <div class="col-md-4">
-    <label for="estado">Estado:</label>
-    <select name="estado" id="estado" class="form-select">
-      <option value="">-- Todos --</option>
-      {% for est in estados %}
-        <option value="{{ est }}" {% if est == estado_seleccionado %}selected{% endif %}>{{ est }}</option>
-      {% endfor %}
-    </select>
-  </div>
+    /* Ajuste de bordes tabla */
+    .table-bordered > :not(caption) > * > * {
+        border-width: 0 0 1px 0;
+    }
+</style>
 
-  <div class="col-md-4">
-    <label for="zona_operativa">Zona Operativa:</label>
-    <select name="zona_operativa" id="zona_operativa" class="form-select">
-      <option value="">-- Todas --</option>
-      {% for zona in zonas %}
-        <option value="{{ zona }}" {% if zona == zona_seleccionada %}selected{% endif %}>{{ zona }}</option>
-      {% endfor %}
-    </select>
-  </div>
+<div class="container mt-4 mb-5">
 
-  <div class="col-md-12">
-    <button type="submit" class="btn btn-success mt-2">🔍 Filtrar</button>
-  </div>
-</form>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 fw-bold" style="color: #264e46;">
+                <i class="bi bi-geo-alt me-2"></i>Fletes en Tránsito por CEDA
+            </h1>
+            <p class="text-secondary mb-0">
+                Consulta detallada de unidades en ruta filtrada por ubicación operativa.
+            </p>
+        </div>
+        <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+            <i class="bi bi-printer me-1"></i> Imprimir
+        </button>
+    </div>
 
-<div class="table-responsive">
-  <hr>
-  <h4>Totales Generales</h4>
-  <table class="table table-bordered table-striped w-auto">
-    <thead class="table-light">
-      <tr>
-        <th>Total Fletes DAP</th>
-        <th>Total Fletes UREA</th>
-        <th>Total Fletes Tránsito</th>
-        <th>Total Ton DAP</th>
-        <th>Total Ton UREA</th>
-        <th>Total Toneladas</th>
-        <th>Máximo Días en Tránsito</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>{{ totales.fletes_dap|formato_mx }}</td>
-        <td>{{ totales.fletes_urea|formato_mx }}</td>
-        <td><strong>{{ totales.total_fletes_transito|formato_mx }}</strong></td>
-        <td>{{ totales.ton_dap|formato_mx:2 }}</td>
-        <td>{{ totales.ton_urea|formato_mx:2 }}</td>
-        <td><strong>{{ totales.ton_total|formato_mx:2 }}</strong></td>
-        <td style="font-weight: bold;">{{ totales.max_dias|formato_mx }}</td>
-      </tr>
-    </tbody>
-  </table>
+    <div class="card shadow-sm border-0 mb-4" style="background-color: #f8f9fa;">
+        <div class="card-body p-4">
+            <h6 class="card-title fw-bold text-secondary mb-3">
+                <i class="bi bi-funnel me-1"></i> Filtros de Búsqueda
+            </h6>
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label for="unidad_operativa" class="form-label small text-muted text-uppercase fw-bold">Unidad Operativa</label>
+                    <select name="unidad_operativa" id="unidad_operativa" class="form-select border-0 shadow-sm">
+                        <option value="">-- Todas --</option>
+                        {% for unidad in unidades %}
+                            <option value="{{ unidad }}" {% if unidad == unidad_seleccionada %}selected{% endif %}>{{ unidad }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
 
-  <table class="table table-bordered table-hover">
-    <thead class="table-secondary">
-      <tr>
-        <th>Unidad Operativa</th>
-        <th>Estado</th>
-        <th>Zona Operativa</th>
-        <th>ID CEDA Agricultura</th>
-        <th>Nombre del CEDA</th>
-        <th>Fletes DAP Tránsito</th>
-        <th>Fletes UREA Tránsito</th>
-        <th>DAP Tránsito (ton)</th>
-        <th>UREA Tránsito (ton)</th>
-        <th>Máximo Días en Tránsito</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for fila in datos %}
-      <tr>
-        <td>{{ fila.unidad_operativa }}</td>
-        <td>{{ fila.estado }}</td>
-        <td>{{ fila.zona_operativa }}</td>
-        <td>{{ fila.id_ceda_agricultura }}</td>
-        <td>{{ fila.nombre_cedas }}</td>
-        <td>{{ fila.fletes_transito_dap|formato_mx }}</td>
-        <td>{{ fila.fletes_transito_urea|formato_mx }}</td>
-        <td>{{ fila.ton_transito_dap|formato_mx:2 }}</td>
-        <td>{{ fila.ton_transito_urea|formato_mx:2 }}</td>
-        <td style="font-weight:bold;">{{ fila.max_dias_en_transito|formato_mx }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+                <div class="col-md-4">
+                    <label for="estado" class="form-label small text-muted text-uppercase fw-bold">Estado</label>
+                    <select name="estado" id="estado" class="form-select border-0 shadow-sm">
+                        <option value="">-- Todos --</option>
+                        {% for est in estados %}
+                            <option value="{{ est }}" {% if est == estado_seleccionado %}selected{% endif %}>{{ est }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <label for="zona_operativa" class="form-label small text-muted text-uppercase fw-bold">Zona Operativa</label>
+                    <select name="zona_operativa" id="zona_operativa" class="form-select border-0 shadow-sm">
+                        <option value="">-- Todas --</option>
+                        {% for zona in zonas %}
+                            <option value="{{ zona }}" {% if zona == zona_seleccionada %}selected{% endif %}>{{ zona }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-12 text-end mt-3">
+                    <button type="submit" class="btn text-white px-4" style="background-color: #264e46;">
+                        <i class="bi bi-search me-2"></i>Filtrar Resultados
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-white border-bottom pt-3 pb-2">
+            <h6 class="fw-bold text-secondary mb-0">
+                <i class="bi bi-speedometer2 me-2"></i>Totales Generales
+            </h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-borderless mb-0 text-center align-middle">
+                    <thead class="text-muted small text-uppercase" style="font-size: 0.75rem; letter-spacing: 1px;">
+                        <tr>
+                            <th class="py-3">Total Fletes</th> <th>Fletes DAP</th>
+                            <th>Fletes UREA</th>
+                            <th class="border-start">Total Toneladas</th> <th>Ton DAP</th>
+                            <th>Ton UREA</th>
+                            <th class="border-start text-danger">Máximo Días</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="pb-3">
+                                <span class="display-6 fw-bold text-dark">{{ totales.total_fletes_transito|formato_mx }}</span>
+                            </td>
+                            <td class="pb-3 text-secondary fs-5">{{ totales.fletes_dap|formato_mx }}</td>
+                            <td class="pb-3 text-secondary fs-5">{{ totales.fletes_urea|formato_mx }}</td>
+                            
+                            <td class="pb-3 border-start bg-light">
+                                <span class="fs-4 fw-bold text-dark">{{ totales.ton_total|formato_mx:2 }}</span>
+                            </td>
+                            <td class="pb-3 text-secondary">{{ totales.ton_dap|formato_mx:2 }}</td>
+                            <td class="pb-3 text-secondary">{{ totales.ton_urea|formato_mx:2 }}</td>
+                            
+                            <td class="pb-3 border-start">
+                                <span class="fs-4 fw-bold text-danger">{{ totales.max_dias|formato_mx }}</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive rounded-top">
+                <table class="table table-hover mb-0 align-middle">
+                    
+                    <thead class="tabla-header-institucional">
+                        <tr>
+                            <th class="py-3 ps-3">Unidad / Estado</th> <th>Zona / CEDA</th>
+                            <th class="text-end">Fletes DAP</th>
+                            <th class="text-end">Fletes UREA</th>
+                            <th class="text-end">DAP (ton)</th>
+                            <th class="text-end">UREA (ton)</th>
+                            <th class="text-center">Máx. Días</th>
+                        </tr>
+                    </thead>
+                    
+                    <tbody>
+                        {% for fila in datos %}
+                        <tr>
+                            <td class="ps-3">
+                                <span class="d-block fw-bold text-dark">{{ fila.unidad_operativa }}</span>
+                                <small class="text-muted">{{ fila.estado }}</small>
+                            </td>
+                            <td>
+                                <span class="d-block fw-medium text-dark">{{ fila.nombre_cedas }}</span>
+                                <small class="text-muted">Zona: {{ fila.zona_operativa }} <span class="mx-1">|</span> ID: {{ fila.id_ceda_agricultura }}</small>
+                            </td>
+
+                            <td class="text-end text-secondary">{{ fila.fletes_transito_dap|formato_mx }}</td>
+                            <td class="text-end text-secondary">{{ fila.fletes_transito_urea|formato_mx }}</td>
+                            <td class="text-end text-secondary">{{ fila.ton_transito_dap|formato_mx:2 }}</td>
+                            <td class="text-end text-secondary">{{ fila.ton_transito_urea|formato_mx:2 }}</td>
+                            
+                            <td class="text-center">
+                                {% if fila.max_dias_en_transito >= 30 %}
+                                    <span class="badge rounded-pill bg-danger bg-opacity-10 text-danger border border-danger">
+                                        {{ fila.max_dias_en_transito|formato_mx }}
+                                    </span>
+                                {% elif fila.max_dias_en_transito > 10 %}
+                                    <span class="badge rounded-pill text-dark border" style="background-color: #ffecb3; border-color: #ffc107;">
+                                        {{ fila.max_dias_en_transito|formato_mx }}
+                                    </span>
+                                {% else %}
+                                    <span class="badge rounded-pill bg-light text-secondary border">
+                                        {{ fila.max_dias_en_transito|formato_mx }}
+                                    </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="bi bi-search fs-1 d-block mb-2"></i>
+                                No se encontraron resultados con los filtros seleccionados.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
 </div>
 {% endblock %}
 
@@ -114,6 +204,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function cargarEstados() {
     const unidad = unidadSelect.value;
+    // Opcional: Mostrar indicador de carga aquí
     fetch(`/ajax/filtros-generales/?tabla=fletes_en_transito_resumen&unidad_operativa=${unidad}`)
       .then(res => res.json())
       .then(data => {
@@ -125,7 +216,8 @@ document.addEventListener('DOMContentLoaded', function () {
           estadoSelect.appendChild(opt);
         });
         zonaSelect.innerHTML = '<option value="">-- Todas --</option>';
-      });
+      })
+      .catch(err => console.error('Error cargando estados:', err));
   }
 
   function cargarZonas() {
@@ -141,16 +233,21 @@ document.addEventListener('DOMContentLoaded', function () {
           opt.text = z;
           zonaSelect.appendChild(opt);
         });
+      })
+      .catch(err => console.error('Error cargando zonas:', err));
+  }
+
+  if(unidadSelect) {
+      unidadSelect.addEventListener('change', () => {
+        cargarEstados();
       });
   }
 
-  unidadSelect.addEventListener('change', () => {
-    cargarEstados();
-  });
-
-  estadoSelect.addEventListener('change', () => {
-    cargarZonas();
-  });
+  if(estadoSelect) {
+      estadoSelect.addEventListener('change', () => {
+        cargarZonas();
+      });
+  }
 });
 </script>
 {% endblock %}

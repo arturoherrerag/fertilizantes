@@ -1,27 +1,155 @@
 {% extends 'fertilizantes/base.html' %}
+{% load formatos %}
+
 {% block title %}Resumen Remanentes por Estado{% endblock %}
+
 {% block content %}
-<h2>📦 Resumen de Remanentes por Unidad Operativa y Estado</h2>
-<div class="table-responsive mt-4">
-  <table class="table table-bordered table-hover">
-    <thead style="background-color: #e0e0e0;">
-      <tr>
-        <th>Unidad Operativa</th><th>Estado</th>
-        <th>DAP Entrada</th><th>UREA Entrada</th>
-        <th>DAP Salida</th><th>UREA Salida</th>
-        <th>DAP Inventario</th><th>UREA Inventario</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for fila in datos %}
-      <tr>
-        <td>{{ fila.unidad_operativa }}</td><td>{{ fila.estado }}</td>
-        <td>{{ fila.dap_remanente_entrada }}</td><td>{{ fila.urea_remanente_entrada }}</td>
-        <td>{{ fila.dap_remanente_salida }}</td><td>{{ fila.urea_remanente_salida }}</td>
-        <td>{{ fila.dap_remanente_inventario }}</td><td>{{ fila.urea_remanente_inventario }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+
+<style>
+    /* --- Estilos Institucionales --- */
+    .tabla-header-institucional th {
+        background-color: #264e46 !important;
+        color: #ffffff !important;
+        font-weight: 500;
+        border: 1px solid rgba(255,255,255,0.1);
+        vertical-align: middle;
+        text-align: center;
+    }
+
+    /* Columna destacada para Inventario Final */
+    .bg-columna-total {
+        background-color: #f8f9fa !important;
+        font-weight: 600;
+        color: #161a1d;
+        border-left: 2px solid #dee2e6;
+    }
+
+    /* Alerta para negativos */
+    .texto-negativo {
+        color: #dc3545 !important;
+        font-weight: 700;
+    }
+
+    /* Estilo para los guiones de valor cero (muy sutiles) */
+    .valor-cero {
+        color: #dee2e6 !important; /* Gris muy claro */
+        font-weight: 300;
+        text-align: center !important; /* El guion se ve mejor centrado */
+        display: block; /* Asegura que tome el ancho para centrarse */
+    }
+</style>
+
+<div class="container mt-4 mb-5">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 fw-bold" style="color: #264e46;">
+                <i class="bi bi-box-seam me-2"></i>Resumen de Remanentes
+            </h1>
+            <p class="text-secondary mb-0">
+                Consolidado de remanentes físicos por Unidad Operativa y Estado.
+            </p>
+        </div>
+        <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+            <i class="bi bi-printer me-1"></i> Imprimir
+        </button>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive rounded-top">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="tabla-header-institucional">
+                        <tr>
+                            <th rowspan="2" class="ps-3 text-start">Ubicación (Unidad / Estado)</th>
+                            <th colspan="2" style="background-color: #2e5d54 !important;">Entradas (Ton)</th>
+                            <th colspan="2" style="background-color: #2e5d54 !important;">Salidas (Ton)</th>
+                            <th colspan="2" style="background-color: #e6d194 !important; color: #161a1d !important;" class="border-start">Inventario Final</th>
+                        </tr>
+                        <tr>
+                            <th style="font-size: 0.9rem;">DAP</th>
+                            <th style="font-size: 0.9rem;">UREA</th>
+                            <th style="font-size: 0.9rem;">DAP</th>
+                            <th style="font-size: 0.9rem;">UREA</th>
+                            <th style="background-color: #f1e3b8 !important; color: #161a1d !important; font-size: 0.9rem;" class="border-start">DAP</th>
+                            <th style="background-color: #f1e3b8 !important; color: #161a1d !important; font-size: 0.9rem;">UREA</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for fila in datos %}
+                        <tr>
+                            <td class="ps-3">
+                                <span class="d-block fw-bold text-dark">{{ fila.unidad_operativa }}</span>
+                                <small class="text-muted">{{ fila.estado }}</small>
+                            </td>
+
+                            <td class="text-end text-secondary">
+                                {% if fila.dap_remanente_entrada == 0 %}
+                                    <span class="valor-cero">-</span>
+                                {% else %}
+                                    {{ fila.dap_remanente_entrada|formato_mx:3 }}
+                                {% endif %}
+                            </td>
+
+                            <td class="text-end text-secondary">
+                                {% if fila.urea_remanente_entrada == 0 %}
+                                    <span class="valor-cero">-</span>
+                                {% else %}
+                                    {{ fila.urea_remanente_entrada|formato_mx:3 }}
+                                {% endif %}
+                            </td>
+
+                            <td class="text-end text-secondary border-start">
+                                {% if fila.dap_remanente_salida == 0 %}
+                                    <span class="valor-cero">-</span>
+                                {% else %}
+                                    {{ fila.dap_remanente_salida|formato_mx:3 }}
+                                {% endif %}
+                            </td>
+
+                            <td class="text-end text-secondary">
+                                {% if fila.urea_remanente_salida == 0 %}
+                                    <span class="valor-cero">-</span>
+                                {% else %}
+                                    {{ fila.urea_remanente_salida|formato_mx:3 }}
+                                {% endif %}
+                            </td>
+
+                            <td class="text-end bg-columna-total border-start {% if fila.dap_remanente_inventario < 0 %}texto-negativo{% endif %}">
+                                {% if fila.dap_remanente_inventario == 0 %}
+                                    <span class="valor-cero">-</span>
+                                {% else %}
+                                    {{ fila.dap_remanente_inventario|formato_mx:3 }}
+                                {% endif %}
+                            </td>
+
+                            <td class="text-end bg-columna-total {% if fila.urea_remanente_inventario < 0 %}texto-negativo{% endif %}">
+                                {% if fila.urea_remanente_inventario == 0 %}
+                                    <span class="valor-cero">-</span>
+                                {% else %}
+                                    {{ fila.urea_remanente_inventario|formato_mx:3 }}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                No se encontraron registros de remanentes.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="mt-3 text-end">
+        <small class="text-muted fst-italic">
+            * Cifras expresadas en toneladas métricas. Guion (-) indica movimiento cero.
+        </small>
+    </div>
+
 </div>
 {% endblock %}

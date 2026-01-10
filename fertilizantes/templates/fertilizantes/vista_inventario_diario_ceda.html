@@ -5,89 +5,186 @@
 {% block title %}Historial Diario de Inventario{% endblock %}
 
 {% block content %}
-<h2 class="mb-4">📊 Historial Diario de Inventario por CEDA</h2>
 
-{% if ceda_info %}
-<div class="card shadow-sm mb-4">
-  <div class="card-header bg-primary text-white">
-    <strong>📍 Información del CEDA</strong>
-  </div>
-  <div class="card-body p-3">
-    <div class="row">
-      <div class="col-md-6">
-        <p><strong>Unidad Operativa:</strong> {{ ceda_info.unidad }}</p>
-        <p><strong>Estado:</strong> {{ ceda_info.estado }}</p>
-      </div>
-      <div class="col-md-6">
-        <p><strong>Zona Operativa:</strong> {{ ceda_info.zona }}</p>
-        <p><strong>Nombre del CEDA:</strong> {{ ceda_info.nombre }}</p>
-      </div>
+<style>
+    /* Encabezado Verde Sólido */
+    .tabla-header-institucional th {
+        background-color: #264e46 !important;
+        color: #ffffff !important;
+        border-bottom: none;
+        vertical-align: middle;
+        font-weight: 500;
+        white-space: nowrap;
+    }
+    
+    /* Fondo sutil para columnas de Inventario (Saldo) */
+    .bg-columna-total {
+        background-color: #f8f9fa !important; /* Gris muy suave */
+    }
+
+    /* Bordes limpios */
+    .table-bordered > :not(caption) > * > * {
+        border-width: 0 0 1px 0;
+    }
+</style>
+
+<div class="container mt-4 mb-5">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 fw-bold" style="color: #264e46;">
+                <i class="bi bi-calendar-week me-2"></i>Historial Diario de Inventario
+            </h1>
+            <p class="text-secondary mb-0">
+                Consulta detallada de movimientos (entradas y salidas) por día y CEDA.
+            </p>
+        </div>
+        <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+            <i class="bi bi-printer me-1"></i> Imprimir
+        </button>
     </div>
-  </div>
-</div>
-{% endif %}
 
-<form method="get" id="filtros-form" class="row g-3 mb-4">
-  <div class="col-md-4">
-    <label for="ceda">ID CEDA Agricultura:</label>
-    <input type="text" name="ceda" id="ceda" class="form-control" value="{{ ceda }}">
-  </div>
-  <div class="col-md-2 align-self-end">
-    <button type="submit" class="btn btn-primary w-100">🔍 Buscar</button>
-  </div>
-</form>
+    <div class="card shadow-sm border-0 mb-4" style="background-color: #f8f9fa;">
+        <div class="card-body p-4">
+            <h6 class="card-title fw-bold text-secondary mb-3">
+                <i class="bi bi-search me-1"></i> Buscar CEDA
+            </h6>
+            <form method="get" id="filtros-form" class="row g-3 align-items-end">
+                <div class="col-md-5">
+                    <label for="ceda" class="form-label small text-muted text-uppercase fw-bold">ID CEDA Agricultura</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-hash"></i></span>
+                        <input type="text" name="ceda" id="ceda" class="form-control border-start-0" 
+                               value="{{ ceda }}" placeholder="Ej. CTT-3930-TENEJAPA">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn text-white w-100" style="background-color: #264e46;">
+                        <i class="bi bi-search me-2"></i>Buscar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-{% if resumen %}
-<hr>
-<h4>📦 Inventario Actual (ton)</h4>
-<table class="table table-bordered w-auto mb-4">
-  <thead class="table-light">
-    <tr>
-      <th>DAP Inventario</th>
-      <th>UREA Inventario</th>
-      <th>Total Toneladas</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>{{ resumen.dap|formato_mx:3 }}</td>
-      <td>{{ resumen.urea|formato_mx:3 }}</td>
-      <td><strong>{{ resumen.total|formato_mx:3 }}</strong></td>
-    </tr>
-  </tbody>
-</table>
-{% endif %}
+    {% if ceda_info %}
+    <div class="card shadow-sm border-0 mb-4 border-start border-4" style="border-left-color: #264e46 !important;">
+        <div class="card-body p-4">
+            <h5 class="fw-bold text-dark mb-3">
+                <i class="bi bi-shop-window me-2" style="color: #264e46;"></i>{{ ceda_info.nombre }}
+            </h5>
+            <div class="row text-secondary">
+                <div class="col-md-3 mb-2">
+                    <small class="d-block text-muted text-uppercase fw-bold" style="font-size: 0.7rem;">Unidad Operativa</small>
+                    <span class="fw-medium"><i class="bi bi-building me-1"></i>{{ ceda_info.unidad }}</span>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <small class="d-block text-muted text-uppercase fw-bold" style="font-size: 0.7rem;">Estado</small>
+                    <span class="fw-medium"><i class="bi bi-map me-1"></i>{{ ceda_info.estado }}</span>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <small class="d-block text-muted text-uppercase fw-bold" style="font-size: 0.7rem;">Zona Operativa</small>
+                    <span class="fw-medium"><i class="bi bi-geo me-1"></i>{{ ceda_info.zona }}</span>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <small class="d-block text-muted text-uppercase fw-bold" style="font-size: 0.7rem;">ID Sistema</small>
+                    <span class="badge bg-light text-dark border">{{ ceda }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
-<div class="table-responsive mt-4">
-  <table class="table table-bordered table-hover">
-    <thead style="background-color: #e0e0e0;">
-      <tr>
-        <th>Fecha</th>
-        <th>DAP Entrada</th>
-        <th>UREA Entrada</th>
-        <th>DAP Salida</th>
-        <th>UREA Salida</th>
-        <th>DAP Inventario</th>
-        <th>UREA Inventario</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for fila in datos %}
-      <tr>
-        <td>{{ fila.fecha|date:"d/m/Y" }}</td>
-        <td>{{ fila.dap_ton_total_entrada|formato_mx:3 }}</td>
-        <td>{{ fila.urea_ton_total_entrada|formato_mx:3 }}</td>
-        <td>{{ fila.dap_ton_total_salida|formato_mx:3 }}</td>
-        <td>{{ fila.urea_ton_total_salida|formato_mx:3 }}</td>
-        <td {% if fila.dap_ton_inventario_acumulado < 0 %}style="color:red;"{% endif %}>
-          {{ fila.dap_ton_inventario_acumulado|formato_mx:3 }}
-        </td>
-        <td {% if fila.urea_ton_inventario_acumulado < 0 %}style="color:red;"{% endif %}>
-          {{ fila.urea_ton_inventario_acumulado|formato_mx:3 }}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+    {% if resumen %}
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-white border-bottom pt-3 pb-2">
+            <h6 class="fw-bold text-secondary mb-0">
+                <i class="bi bi-box-seam me-2"></i>Inventario Actual (Toneladas)
+            </h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-borderless mb-0 text-center align-middle">
+                    <thead class="text-muted small text-uppercase" style="font-size: 0.75rem; letter-spacing: 1px;">
+                        <tr>
+                            <th class="py-3">Total Inventario</th>
+                            <th class="border-start">DAP</th>
+                            <th>UREA</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="pb-3">
+                                <span class="display-6 fw-bold text-dark">{{ resumen.total|formato_mx:3 }}</span>
+                            </td>
+                            <td class="pb-3 border-start">
+                                <span class="fs-4 fw-medium text-secondary">{{ resumen.dap|formato_mx:3 }}</span>
+                            </td>
+                            <td class="pb-3">
+                                <span class="fs-4 fw-medium text-secondary">{{ resumen.urea|formato_mx:3 }}</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive rounded-top">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="tabla-header-institucional">
+                        <tr>
+                            <th class="py-3 ps-3 text-center">Fecha</th>
+                            <th class="text-end">DAP Entrada</th>
+                            <th class="text-end">UREA Entrada</th>
+                            <th class="text-end border-start border-light">DAP Salida</th>
+                            <th class="text-end">UREA Salida</th>
+                            <th class="text-end fw-bold" style="background-color: #20423b !important;">DAP Inv.</th>
+                            <th class="text-end fw-bold" style="background-color: #20423b !important;">UREA Inv.</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for fila in datos %}
+                        <tr>
+                            <td class="text-center ps-3 text-muted">
+                                {{ fila.fecha|date:"d M Y" }}
+                            </td>
+                            
+                            <td class="text-end text-secondary">{{ fila.dap_ton_total_entrada|formato_mx:3 }}</td>
+                            <td class="text-end text-secondary">{{ fila.urea_ton_total_entrada|formato_mx:3 }}</td>
+                            
+                            <td class="text-end text-secondary border-start">{{ fila.dap_ton_total_salida|formato_mx:3 }}</td>
+                            <td class="text-end text-secondary">{{ fila.urea_ton_total_salida|formato_mx:3 }}</td>
+                            
+                            <td class="text-end fw-bold bg-columna-total {% if fila.dap_ton_inventario_acumulado < 0 %}text-danger{% else %}text-dark{% endif %}">
+                                {{ fila.dap_ton_inventario_acumulado|formato_mx:3 }}
+                            </td>
+                            
+                            <td class="text-end fw-bold bg-columna-total {% if fila.urea_ton_inventario_acumulado < 0 %}text-danger{% else %}text-dark{% endif %}">
+                                {{ fila.urea_ton_inventario_acumulado|formato_mx:3 }}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                {% if ceda %}
+                                    <i class="bi bi-folder-x fs-1 d-block mb-2"></i>
+                                    No hay historial registrado para este CEDA.
+                                {% else %}
+                                    <i class="bi bi-arrow-up-circle fs-1 d-block mb-2"></i>
+                                    Ingresa un ID de CEDA para ver el historial.
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
 </div>
 {% endblock %}

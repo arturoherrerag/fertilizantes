@@ -1,51 +1,270 @@
 {% extends 'fertilizantes/base.html' %}
 {% load formatos %}
+
 {% block title %}Inventario Diario CEDA (Campo vs SIGAP){% endblock %}
+
 {% block content %}
-<h2>🗓️ Inventario Diario – Campo vs SIGAP</h2>
 
-{% include "fertilizantes/_filtros_generales.html" with tabla_ajax="inventario_ceda_diario_2025_campo_sigap" %}
+<style>
+    /* Estilos Institucionales */
+    .tabla-header-institucional th {
+        background-color: #264e46 !important;
+        color: #ffffff !important;
+        font-weight: 500;
+        vertical-align: middle;
+        text-align: center;
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    /* Grupos de columnas para facilitar la lectura horizontal */
+    .header-group-dap { background-color: #2e5d54 !important; }
+    .header-group-urea { background-color: #2e5d54 !important; }
+    
+    /* Columnas de datos */
+    .col-dato-sigap { background-color: #f8f9fa; color: #6c757d; }
+    .col-dato-campo { background-color: #ffffff; color: #212529; font-weight: 500; }
+    
+    /* Diferencias */
+    .col-diff { border-left: 1px dashed #dee2e6; }
+    .diff-positiva { color: #198754; font-weight: bold; } /* Verde si sobra */
+    .diff-negativa { color: #dc3545; font-weight: bold; } /* Rojo si falta */
+    .diff-cero { color: #e9ecef; } /* Gris suave si cuadra */
+</style>
 
-{# ----- BLOQUE CONDICIONAL ----- #}
-{% if mensaje %}
-  <div class="alert alert-info my-4">{{ mensaje }}</div>
-{% endif %}
+<div class="container-fluid mt-4 mb-5">
 
-{% if datos %}
-  <div class="table-responsive mt-4">
-    <table class="table table-bordered table-hover">
-      <!--  cabeceras y filas que ya tienes  -->
-    </table>
-  </div>
-{% endif %}
-{# ----- FIN BLOQUE CONDICIONAL ----- #}
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 fw-bold" style="color: #264e46;">
+                <i class="bi bi-clipboard-data me-2"></i>Inventario Diario: Campo vs SIGAP
+            </h1>
+            <p class="text-secondary mb-0">
+                Comparativa de existencias físicas reportadas en Campo contra el sistema SIGAP.
+            </p>
+        </div>
+        <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+            <i class="bi bi-printer me-1"></i> Imprimir
+        </button>
+    </div>
 
-<div class="table-responsive mt-4">
-  <table class="table table-bordered table-hover">
-    <thead class="table-light">
-      <tr>
-        <th>Fecha</th><th>Unidad Operativa</th><th>Estado</th><th>Zona</th>
-        <th>ID CEDA</th><th>Nombre CEDA</th>
-        <th>DAP SIGAP (t)</th><th>UREA SIGAP (t)</th>
-        <th>DAP Campo (t)</th><th>UREA Campo (t)</th>
-        <th>Δ DAP</th><th>Δ UREA</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for f in datos %}
-      <tr>
-        <td>{{ f.fecha|date:"d/m/Y" }}</td>
-        <td>{{ f.unidad_operativa }}</td><td>{{ f.estado }}</td><td>{{ f.zona_operativa }}</td>
-        <td>{{ f.id_ceda_agricultura }}</td><td>{{ f.nombre_cedas }}</td>
-        <td>{{ f.dap_inventario_sigap|formato_mx:3 }}</td>
-        <td>{{ f.urea_inventario_sigap|formato_mx:3 }}</td>
-        <td>{{ f.dap_inventario_campo|formato_mx:3 }}</td>
-        <td>{{ f.urea_inventario_campo|formato_mx:3 }}</td>
-        <td>{{ f.dap_sigap_campo|formato_mx:3 }}</td>
-        <td>{{ f.urea_sigap_campo|formato_mx:3 }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+    <div class="card shadow-sm border-0 mb-4 bg-light">
+        <div class="card-body p-4">
+            <h6 class="fw-bold text-secondary mb-3">
+                <i class="bi bi-funnel me-1"></i> Filtros de Búsqueda
+            </h6>
+            <form method="get" class="row g-3 align-items-end" id="filtros-form">
+                <div class="col-md-3">
+                    <label for="unidad_operativa" class="form-label small text-muted text-uppercase fw-bold">Unidad Operativa</label>
+                    <select name="unidad_operativa" id="unidad_operativa" class="form-select border-0 shadow-sm">
+                        <option value="">-- Todas --</option>
+                        {% for u in unidades %}
+                            <option value="{{ u }}" {% if u == unidad_operativa_seleccionada %}selected{% endif %}>{{ u }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="estado" class="form-label small text-muted text-uppercase fw-bold">Estado</label>
+                    <select name="estado" id="estado" class="form-select border-0 shadow-sm">
+                        <option value="">-- Todos --</option>
+                        </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="id_ceda_agricultura" class="form-label small text-muted text-uppercase fw-bold">ID CEDA</label>
+                    <input type="text" name="id_ceda_agricultura" id="id_ceda_agricultura" 
+                           class="form-control border-0 shadow-sm" 
+                           value="{{ request.GET.id_ceda_agricultura }}" 
+                           placeholder="Ej. CTT-3930">
+                </div>
+                <div class="col-md-3">
+                    <label for="fecha_fin" class="form-label small text-muted text-uppercase fw-bold">Fecha Corte</label>
+                    <input type="date" name="fecha_fin" id="fecha_fin" 
+                           class="form-control border-0 shadow-sm" 
+                           value="{{ fecha_fin }}">
+                </div>
+
+                <div class="col-12 text-end mt-3">
+                    <button type="button" class="btn btn-success text-white shadow-sm me-2" onclick="descargarCSV()">
+                        <i class="bi bi-file-earmark-excel me-1"></i> Descargar CSV
+                    </button>
+                    <button type="submit" class="btn btn-primary px-4 shadow-sm" style="background-color: #264e46;">
+                        <i class="bi bi-search me-1"></i> Consultar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if mensaje %}
+        <div class="alert alert-info shadow-sm border-0 d-flex align-items-center mb-4">
+            <i class="bi bi-info-circle-fill fs-4 me-3"></i>
+            <div>
+                {{ mensaje }}
+            </div>
+        </div>
+    {% endif %}
+
+    {% if datos %}
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive rounded-top" style="max-height: 600px; overflow-y: auto;">
+                <table class="table table-hover mb-0 align-middle table-sm" id="tabla-resultados">
+                    <thead class="tabla-header-institucional sticky-top" style="z-index: 10;">
+                        <tr>
+                            <th rowspan="2" class="ps-3 text-start">Fecha</th>
+                            <th rowspan="2" class="text-start">Ubicación / CEDA</th>
+                            
+                            <th colspan="3" class="header-group-dap border-start border-white">DAP (Toneladas)</th>
+                            
+                            <th colspan="3" class="header-group-urea border-start border-white">UREA (Toneladas)</th>
+                        </tr>
+                        <tr>
+                            <th class="small border-start" style="width: 100px;">SIGAP</th>
+                            <th class="small" style="width: 100px;">Campo</th>
+                            <th class="small bg-white text-dark fw-bold border-start" style="width: 100px;">Diferencia</th>
+                            
+                            <th class="small border-start" style="width: 100px;">SIGAP</th>
+                            <th class="small" style="width: 100px;">Campo</th>
+                            <th class="small bg-white text-dark fw-bold border-start" style="width: 100px;">Diferencia</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for f in datos %}
+                        <tr>
+                            <td class="ps-3 text-secondary" style="white-space: nowrap;">
+                                {{ f.fecha|date:"d/m/Y" }}
+                            </td>
+                            
+                            <td>
+                                <div class="fw-bold text-dark">{{ f.nombre_cedas }}</div>
+                                <small class="text-muted d-block">
+                                    {{ f.unidad_operativa }} | {{ f.estado }}
+                                </small>
+                                <small class="text-muted font-monospace" style="font-size: 0.75rem;">
+                                    ID: {{ f.id_ceda_agricultura }}
+                                </small>
+                            </td>
+
+                            <td class="text-end col-dato-sigap border-start">
+                                {{ f.dap_inventario_sigap|formato_mx:3 }}
+                            </td>
+                            <td class="text-end col-dato-campo">
+                                {{ f.dap_inventario_campo|formato_mx:3 }}
+                            </td>
+                            <td class="text-end col-diff fw-bold {% if f.dap_sigap_campo < 0 %}diff-negativa{% elif f.dap_sigap_campo > 0 %}diff-positiva{% else %}diff-cero{% endif %}">
+                                {{ f.dap_sigap_campo|formato_mx:3 }}
+                            </td>
+
+                            <td class="text-end col-dato-sigap border-start">
+                                {{ f.urea_inventario_sigap|formato_mx:3 }}
+                            </td>
+                            <td class="text-end col-dato-campo">
+                                {{ f.urea_inventario_campo|formato_mx:3 }}
+                            </td>
+                            <td class="text-end col-diff fw-bold {% if f.urea_sigap_campo < 0 %}diff-negativa{% elif f.urea_sigap_campo > 0 %}diff-positiva{% else %}diff-cero{% endif %}">
+                                {{ f.urea_sigap_campo|formato_mx:3 }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer bg-white py-2 small text-muted text-end">
+            Mostrando {{ datos|length }} registros. *Diferencia = Campo - SIGAP.
+        </div>
+    </div>
+    {% endif %}
+
 </div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // --- 1. Lógica para Filtros Dependientes (AJAX) ---
+    const unidadSelect = document.getElementById("unidad_operativa");
+    const estadoSelect = document.getElementById("estado");
+    
+    // URL de la API de filtros generales que ya tienes en views.py
+    // Usamos la tabla "inventario_ceda_diario_2025_campo_sigap" como referencia
+    const urlFiltros = "{% url 'ajax_filtros_generales' %}"; 
+    const tablaRef = "inventario_ceda_diario_2025_campo_sigap"; 
+    const estadoPreseleccionado = "{{ request.GET.estado|default:'' }}";
+
+    function cargarEstados() {
+        const unidad = unidadSelect.value;
+        const params = new URLSearchParams({
+            tabla: tablaRef,
+            unidad_operativa: unidad
+        });
+
+        fetch(`${urlFiltros}?${params.toString()}`)
+            .then(response => response.json())
+            .then(data => {
+                // Guardar valor actual si existe
+                const valorActual = estadoSelect.value || estadoPreseleccionado;
+                
+                // Limpiar y llenar
+                estadoSelect.innerHTML = '<option value="">-- Todos --</option>';
+                data.estados.forEach(edo => {
+                    const option = document.createElement("option");
+                    option.value = edo;
+                    option.textContent = edo;
+                    if (edo === valorActual) option.selected = true;
+                    estadoSelect.appendChild(option);
+                });
+            })
+            .catch(console.error);
+    }
+
+    // Event Listeners
+    if(unidadSelect) {
+        unidadSelect.addEventListener('change', () => {
+            // Al cambiar unidad, reseteamos el estado seleccionado para que no quede uno inválido
+            estadoSelect.value = ""; 
+            cargarEstados();
+        });
+        // Carga inicial
+        cargarEstados();
+    }
+
+});
+
+// --- 2. Lógica para Descargar CSV (Cliente) ---
+function descargarCSV() {
+    const tabla = document.getElementById("tabla-resultados");
+    if (!tabla) {
+        alert("No hay datos para exportar.");
+        return;
+    }
+
+    let csv = [];
+    const filas = tabla.querySelectorAll("tr");
+    
+    for (let i = 0; i < filas.length; i++) {
+        let fila = [], cols = filas[i].querySelectorAll("td, th");
+        
+        for (let j = 0; j < cols.length; j++) {
+            // Limpiar texto: quitar saltos de línea múltiples y espacios extra
+            let data = cols[j].innerText.replace(/(\r\n|\n|\r)/gm, " ").replace(/\s+/g, " ").trim();
+            // Escapar comillas dobles
+            data = data.replace(/"/g, '""');
+            // Envolver en comillas
+            fila.push('"' + data + '"');
+        }
+        csv.push(fila.join(","));
+    }
+
+    const csvFile = new Blob(["\uFEFF" + csv.join("\n")], {type: "text/csv;charset=utf-8;"});
+    const downloadLink = document.createElement("a");
+    downloadLink.download = "Inventario_Campo_vs_SIGAP.csv";
+    downloadLink.href = window.URL.createObjectURL(csvFile);
+    downloadLink.style.display = "none";
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+}
+</script>
 {% endblock %}

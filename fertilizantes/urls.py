@@ -3,8 +3,10 @@ from . import views
 from .views import comentarios_por_ceda
 
 urlpatterns = [
-    
+
+    # URLS sistema 2025
     path('inicio/', views.inicio, name='inicio'),
+    path('seleccionar-anio/', views.seleccionar_anio, name='seleccionar_anio'),
     path('actualizacion/', views.actualizar_bases, name='actualizacion'),
     path('reportes/', views.reportes, name='reportes'),
     path('reportes/fletes_transito/', views.reporte_fletes_transito, name='fletes_transito'),
@@ -58,4 +60,7 @@ urlpatterns = [
     path("api/fletes/exportar_csv/", views.api_fletes_exportar_csv, name="api_fletes_exportar_csv"),
     path("ocr/", views.ocr_page, name="ocr_page"),
     path("ocr/extract/", views.ocr_extract, name="ocr_extract"),
+
+    # URLS sistema 2026
+    path('visualizacion/avance-2026/', views.dashboard_avance_nacional_2026, name='dashboard_avance_2026'),
 ]

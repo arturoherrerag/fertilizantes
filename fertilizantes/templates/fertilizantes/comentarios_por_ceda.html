@@ -1,112 +1,304 @@
 {% extends "fertilizantes/base.html" %}
 {% load static %}
 
+{% block title %}Comentarios por CEDA{% endblock %}
+
 {% block content %}
-<div class="container mt-4">
-  <h2 class="mb-4">Comentarios por CEDA</h2>
-
-  <!-- Filtros generales -->
-  {% include "fertilizantes/_filtros_sin_fechas.html" with tabla_ajax="vista_comentarios_ceda" %}
-
-  {% if filtro_aplicado %}
-    {% if not df.empty %}
-
-    <div class="mb-2">
-      <button class="btn btn-outline-secondary btn-sm" onclick="toggleColumnasExtra()">Mostrar/Ocultar columnas de ubicación</button>
-    </div>
-
-    <div class="table-responsive">
-      <table id="comentariosTable" class="table table-bordered table-striped table-sm align-middle text-center">
-        <thead class="table-light small">
-          <tr>
-            <th class="col-extra">Unidad</th>
-            <th class="col-extra">Estado</th>
-            <th class="col-extra">Zona</th>
-            <th>ID CEDA</th>
-			<th>Nombre</th>
-            <th>Comentarios actuales</th><th>Nuevo comentario</th>
-          </tr>
-        </thead>
-        <tbody class="small">
-          {% for row in df.itertuples %}
-          <tr>
-            <td class="col-extra">{{ row.unidad_operativa }}</td>
-            <td class="col-extra">{{ row.estado }}</td>
-            <td class="col-extra">{{ row.zona_operativa }}</td>
-            <td>{{ row.id_ceda_agricultura }}</td>
-            <td>{{ row.nombre_cedas }}</td>
-			<td>
-			  <textarea readonly class="comentarios-actuales form-control form-control-sm {% if row.comentarios_actuales %}bg-warning-subtle{% endif %}"
-			            style="width: 300px; max-height: 250px; overflow: auto; resize: vertical;">
-			    {{ row.comentarios_actuales|default:"" }}
-			  </textarea>
-			</td>
-            <td>
-              <form method="post" class="d-flex flex-column">
-                {% csrf_token %}
-                <input type="hidden" name="id_ceda_agricultura" value="{{ row.id_ceda_agricultura }}">
-                <textarea name="comentario" rows="3" class="form-control form-control-sm mb-1" placeholder="Agregar comentario..." style="width: 280px; resize: vertical;"></textarea>
-                <button type="submit" class="btn btn-sm btn-primary align-self-end">Guardar</button>
-              </form>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% else %}
-      <div class="alert alert-warning">No se encontraron datos para los filtros seleccionados.</div>
-    {% endif %}
-  {% else %}
-    <div class="alert alert-info">Selecciona al menos un filtro para mostrar los datos.</div>
-  {% endif %}
-</div>
-
-<!-- Script de exportación -->
-<script>
-function exportTableToCSV(filename) {
-  const csv = [];
-  const rows = document.querySelectorAll("table tr");
-  for (let i = 0; i < rows.length; i++) {
-    const row = [], cols = rows[i].querySelectorAll("td, th");
-    for (let j = 0; j < cols.length; j++) {
-      row.push('"' + cols[j].innerText.replace(/\n/g, ' ') + '"');
-    }
-    csv.push(row.join(","));
-  }
-  const csvFile = new Blob([csv.join("\n")], { type: "text/csv" });
-  const link = document.createElement("a");
-  link.download = filename;
-  link.href = window.URL.createObjectURL(csvFile);
-  link.style.display = "none";
-  document.body.appendChild(link);
-  link.click();
-}
-
-function toggleColumnasExtra() {
-  const columnas = document.querySelectorAll('.col-extra');
-  columnas.forEach(col => {
-    col.style.display = (col.style.display === 'none') ? 'table-cell' : 'none';
-  });
-}
-
-document.addEventListener("DOMContentLoaded", function () {
-  toggleColumnasExtra();
-});
-</script>
 
 <style>
-textarea.comentarios-actuales {
-  width: 300px;          /* puedes ajustar este valor si lo quieres más ancho */
-  height: 100px;
-  resize: vertical;      /* el usuario puede agrandarla verticalmente */
-  overflow-y: auto;      /* si el texto es largo, aparece scroll */
-  border: none;
-  background-color: #f8f9fa;  /* mismo fondo que el resto de la celda */
-  font-size: 0.85rem;
-  padding: 4px;
-  line-height: 1.2;
-}
+    /* --- Estilos idénticos a la referencia (Estadísticas) --- */
+    .tabla-header-institucional th {
+        background-color: #264e46 !important;
+        color: #ffffff !important;
+        font-weight: 500;
+        vertical-align: middle;
+        text-align: center;
+        border: 1px solid rgba(255,255,255,0.1);
+        font-size: 0.85rem; /* Un poco más grande que estadísticas para leer mejor */
+    }
+
+    /* Inputs de filtros estilo "Clean" */
+    .form-label-custom {
+        font-size: 0.75rem;
+        color: #6c757d;
+        text-transform: uppercase;
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+    }
+    
+    .input-custom {
+        border: 0 !important;
+        box-shadow: 0 .125rem .25rem rgba(0,0,0,.075) !important; /* shadow-sm */
+    }
+
+    /* Textarea de lectura estilizado */
+    textarea.comentarios-actuales {
+        width: 100%;
+        min-width: 280px;
+        height: 90px;
+        resize: vertical;
+        overflow-y: auto;
+        border: 1px solid #dee2e6;
+        background-color: #f8f9fa;
+        font-size: 0.8rem;
+        padding: 6px;
+        line-height: 1.3;
+        border-radius: 4px;
+        color: #495057;
+    }
+    
+    textarea.comentarios-actuales.tiene-datos {
+        background-color: #fffdf5; 
+        border-color: #e6d194;
+        color: #161a1d;
+    }
+
+    .col-extra {
+        display: none; 
+    }
 </style>
+
+<!-- Usamos container-fluid para ocupar todo el ancho como en la referencia -->
+<div class="container-fluid mt-4 mb-5">
+
+    <!-- Encabezado idéntico a la referencia -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 fw-bold" style="color: #264e46;">
+                <i class="bi bi-chat-left-text me-2"></i>Comentarios por CEDA
+            </h1>
+            <p class="text-secondary mb-0">
+                Gestión de bitácora operativa y observaciones por centro de distribución.
+            </p>
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+                <i class="bi bi-printer me-1"></i> Imprimir
+            </button>
+        </div>
+    </div>
+
+    <!-- Tarjeta de Filtros (Estilo idéntico) -->
+    <div class="card shadow-sm border-0 mb-4 bg-light">
+        <div class="card-body p-4">
+            <h6 class="fw-bold text-secondary mb-3">
+                <i class="bi bi-funnel me-1"></i> Filtros de Búsqueda
+            </h6>
+            
+            <!-- Formulario explícito para replicar el estilo de inputs -->
+            <form method="get" class="row g-3 align-items-end" id="filtros-form">
+                <div class="col-md-3">
+                    <label class="form-label-custom">Unidad Operativa</label>
+                    <select name="unidad_operativa" id="filtro_unidad" class="form-select input-custom">
+                        <option value="">-- Todas --</option>
+                        {% for u in unidades %}
+                            <option value="{{ u }}" {% if u == unidad_operativa_seleccionado %}selected{% endif %}>{{ u }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label-custom">Estado</label>
+                    <select name="estado" id="filtro_estado" class="form-select input-custom">
+                        <option value="">-- Todos --</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label-custom">Zona Operativa</label>
+                    <select name="zona_operativa" id="filtro_zona" class="form-select input-custom">
+                        <option value="">-- Todas --</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label-custom">ID CEDA</label>
+                    <input type="text" name="id_ceda_agricultura" id="filtro_ceda" class="form-control input-custom" placeholder="Ej. CTT-3930" value="{{ request.GET.id_ceda_agricultura }}">
+                </div>
+
+                <!-- Botones alineados a la derecha abajo -->
+                <div class="col-12 text-end mt-3">
+                    <button type="button" class="btn btn-outline-secondary btn-sm me-2" onclick="toggleColumnasExtra()">
+                        <i class="bi bi-layout-three-columns me-1"></i> Ver Ubicación
+                    </button>
+                    <button type="button" class="btn btn-success text-white shadow-sm me-2" onclick="exportTableToCSV('comentarios_ceda.csv')">
+                        <i class="bi bi-file-earmark-excel me-1"></i> Descargar CSV
+                    </button>
+                    <button type="submit" class="btn btn-primary px-4 shadow-sm" style="background-color: #264e46; border-color: #264e46;">
+                        <i class="bi bi-search me-1"></i> Consultar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if filtro_aplicado %}
+        {% if not df.empty %}
+        
+        <!-- Tarjeta de Resultados -->
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-0">
+                <div class="table-responsive rounded-top">
+                    <table id="comentariosTable" class="table table-hover mb-0 align-middle">
+                        <thead class="tabla-header-institucional">
+                            <tr>
+                                <th class="col-extra">Unidad</th>
+                                <th class="col-extra">Estado</th>
+                                <th class="col-extra">Zona</th>
+                                <th>ID CEDA</th>
+                                <th class="text-start">Nombre CEDA</th>
+                                <th style="width: 40%;">Historial de Comentarios</th>
+                                <th style="width: 20%;">Nuevo Comentario</th>
+                            </tr>
+                        </thead>
+                        <tbody class="small">
+                            {% for row in df.itertuples %}
+                            <tr>
+                                <td class="col-extra text-muted">{{ row.unidad_operativa }}</td>
+                                <td class="col-extra text-muted">{{ row.estado }}</td>
+                                <td class="col-extra text-muted">{{ row.zona_operativa }}</td>
+                                <td class="font-monospace fw-bold text-dark text-center">{{ row.id_ceda_agricultura }}</td>
+                                <td class="fw-medium text-start">{{ row.nombre_cedas }}</td>
+                                
+                                <!-- Columna de Lectura -->
+                                <td class="p-2">
+                                    <textarea readonly class="comentarios-actuales {% if row.comentarios_actuales %}tiene-datos{% endif %}">{{ row.comentarios_actuales|default:"Sin comentarios previos." }}</textarea>
+                                </td>
+
+                                <!-- Columna de Escritura -->
+                                <td class="p-2 bg-light border-start">
+                                    <form method="post" class="d-flex flex-column h-100 justify-content-center">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="id_ceda_agricultura" value="{{ row.id_ceda_agricultura }}">
+                                        
+                                        <textarea name="comentario" rows="2" 
+                                                  class="form-control form-control-sm mb-2 input-custom" 
+                                                  placeholder="Escribe aquí..." 
+                                                  style="resize: vertical;"></textarea>
+                                        
+                                        <button type="submit" class="btn btn-sm text-white w-100 shadow-sm" 
+                                                style="background-color: #264e46;">
+                                            <i class="bi bi-save me-1"></i> Guardar
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer bg-white py-2 small text-muted text-end">
+                Mostrando {{ df|length }} registros.
+            </div>
+        </div>
+
+        {% else %}
+            <div class="alert alert-warning shadow-sm border-0">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                No se encontraron datos para los filtros seleccionados.
+            </div>
+        {% endif %}
+    {% else %}
+        <div class="alert alert-info shadow-sm border-0" style="background-color: #e8f4f8; color: #0c5460;">
+            <i class="bi bi-info-circle-fill me-2"></i>
+            Selecciona al menos un filtro (Unidad, Estado o ID) para visualizar la bitácora.
+        </div>
+    {% endif %}
+</div>
+
+<!-- Scripts -->
+<script>
+// 1. Lógica de Filtros Dependientes (AJAX)
+document.addEventListener("DOMContentLoaded", () => {
+  const unidad = document.getElementById("filtro_unidad");
+  const estado = document.getElementById("filtro_estado");
+  const zona   = document.getElementById("filtro_zona");
+
+  // Cargar combos iniciales
+  fetchFiltro();
+
+  unidad.addEventListener("change", fetchFiltro);
+  estado.addEventListener("change", fetchFiltro);
+
+  function fetchFiltro() {
+    const params = new URLSearchParams({
+      tabla: "vista_comentarios_ceda",
+      unidad_operativa: unidad.value,
+      estado: estado.value
+    });
+
+    fetch(`/api/filtros_generales/?${params}`)
+      .then(r => r.json())
+      .then(data => {
+        if ("estados" in data) actualizarSelect(estado, data.estados);
+        if ("zonas" in data)   actualizarSelect(zona, data.zonas);
+      });
+  }
+
+  function actualizarSelect(select, opciones) {
+    const valActual = select.value;
+    select.innerHTML = '<option value="">-- Todos --</option>';
+    opciones.forEach(op => {
+      const opt = document.createElement("option");
+      opt.value = op;
+      opt.textContent = op;
+      if (op === valActual) opt.selected = true;
+      select.appendChild(opt);
+    });
+  }
+});
+
+// 2. Exportar a CSV
+function exportTableToCSV(filename) {
+    const csv = [];
+    const rows = document.querySelectorAll("table tr");
+    
+    for (let i = 0; i < rows.length; i++) {
+        const row = [], cols = rows[i].querySelectorAll("td, th");
+        
+        for (let j = 0; j < cols.length; j++) {
+            // Limpieza de texto
+            let data = cols[j].innerText.replace(/(\r\n|\n|\r)/gm, " ").replace(/\s+/g, " ").trim();
+            // Escapar comillas dobles
+            data = data.replace(/"/g, '""');
+            row.push('"' + data + '"');
+        }
+        csv.push(row.join(","));
+    }
+
+    const csvFile = new Blob(["\uFEFF" + csv.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.download = filename;
+    link.href = window.URL.createObjectURL(csvFile);
+    link.style.display = "none";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// 3. Mostrar/Ocultar Columnas Extra
+function toggleColumnasExtra() {
+    const columnas = document.querySelectorAll('.col-extra');
+    const btn = document.querySelector('button[onclick="toggleColumnasExtra()"]');
+    
+    let isHidden = false;
+    if(columnas.length > 0) {
+        isHidden = window.getComputedStyle(columnas[0]).display === 'none';
+    }
+
+    columnas.forEach(col => {
+        col.style.display = isHidden ? 'table-cell' : 'none';
+    });
+
+    if(isHidden) {
+        btn.classList.remove('btn-outline-secondary');
+        btn.classList.add('btn-secondary');
+    } else {
+        btn.classList.add('btn-outline-secondary');
+        btn.classList.remove('btn-secondary');
+    }
+}
+</script>
 
 {% endblock %}

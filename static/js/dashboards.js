@@ -1,74 +1,157 @@
 document.addEventListener("DOMContentLoaded", () => {
-  // === Tarjetas KPI nacionales ===
-  const tarjetas = document.getElementById("kpi-cards");
-  const formKPI = document.getElementById("filtros-form");
+  // Paleta Institucional (Basada en tus archivos originales)
+  window.COLORES = {
+    abasto: "#004634",     // Verde Oscuro
+    entregado: "#146B4D",  // Verde Medio
+    dh: "#6A1B3F",         // Vino
+    superficie: "#A1760E", // Dorado
+    gris: "#e0e0e0"        // Gris para el fondo de la dona
+  };
 
-  if (tarjetas && formKPI) {
-    console.log("📊 Cargando tarjetas KPI...");
+  // 1. Detectar Dashboard Nacional
+  const kpiContainer = document.getElementById("kpi-cards");
+  if (kpiContainer) {
+    console.log("📊 Iniciando Dashboard Nacional...");
     cargarKpi();
-    cargarFiltros();
+    cargarFiltros("select"); 
 
-    formKPI.addEventListener("submit", e => {
-      e.preventDefault();
-      const params = Object.fromEntries(new FormData(formKPI));
-      cargarKpi(params);
-    });
+    const form = document.getElementById("filtros-form");
+    if (form) {
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const params = new FormData(form);
+        cargarKpi(Object.fromEntries(params));
+      });
+    }
   }
 
-  // === Tabla resumen por estado ===
-  const tabla = document.getElementById("tabla_estados");
-  if (tabla) {
-    console.log("📊 Iniciando carga de resumen por estado...");
-    cargarResumenPorEstado();
+  // 2. Detectar Resumen Estatal
+  const tablaEstados = document.getElementById("tabla_estados");
+  if (tablaEstados) {
+    console.log("📍 Iniciando Resumen Estatal...");
+    cargarResumen();
+    cargarFiltros("datalist");
 
-    const unidad = document.getElementById("filtro_unidad");
-    const estado = document.getElementById("filtro_estado");
-    const tipoMeta = document.getElementById("filtro_tipo_meta");
-
-    if (unidad) unidad.addEventListener("input", cargarResumenPorEstado);
-    if (estado) estado.addEventListener("input", cargarResumenPorEstado);
-    if (tipoMeta) tipoMeta.addEventListener("change", cargarResumenPorEstado);
+    // Listeners
+    ["filtro_unidad", "filtro_estado", "filtro_tipo_meta"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener("change", cargarResumen);
+    });
   }
 });
 
-// ====== Tarjetas KPI ======
+// ==========================================
+//  DASHBOARD NACIONAL (KPIs)
+// ==========================================
+
 function cargarKpi(params = {}) {
-  fetch(`/api/kpi/?${new URLSearchParams(params)}`)
+  const container = document.getElementById("kpi-cards");
+  // Loader simple
+  container.innerHTML = '<div class="col-12 text-center py-5"><div class="spinner-border text-secondary" role="status"></div></div>';
+
+  const q = new URLSearchParams(params).toString();
+  
+  fetch(`/api/kpi/?${q}`)
     .then(r => r.json())
-    .then(data => pintarTarjetas(data));
+    .then(data => {
+      if (data.error) throw new Error(data.error);
+      const cards = transformarDatosKPI(data);
+      pintarTarjetas(cards);
+    })
+    .catch(err => {
+      console.error("Error KPI:", err);
+      container.innerHTML = `<div class="alert alert-danger">Error al cargar datos.</div>`;
+    });
+}
+
+function transformarDatosKPI(d) {
+  return [
+    {
+      id: "abasto",
+      titulo: "Abasto Recibido (t)",
+      meta: d.meta_total_ton,
+      avance: d.abasto_recibido,
+      es_entero: false
+    },
+    {
+      id: "entregado",
+      titulo: "Fertilizante Entregado (t)",
+      meta: d.meta_total_ton,
+      avance: d.entregado,
+      es_entero: false
+    },
+    {
+      id: "dh",
+      titulo: "Derechohabientes",
+      meta: d.meta_dh,
+      avance: d.derechohabientes_apoyados,
+      es_entero: true
+    },
+    {
+      id: "superficie",
+      titulo: "Superficie (ha)",
+      meta: d.meta_ha,
+      avance: d.superficie_beneficiada,
+      es_entero: true
+    }
+  ];
 }
 
 function pintarTarjetas(cards) {
   const cont = document.getElementById("kpi-cards");
-  if (!cont) return;
-
   cont.innerHTML = "";
 
   cards.forEach(c => {
-    c.pct = parseFloat(c.pct);  // ✅ Asegurar número
+    const meta = parseFloat(c.meta) || 0;
+    const avance = parseFloat(c.avance) || 0;
+    const pendiente = Math.max(meta - avance, 0);
+    // Calcular porcentaje (tope 100 visualmente para la gráfica)
+    const pct = meta > 0 ? (avance / meta) * 100 : 0;
+    const pctVisual = Math.min(100, pct);
+    
+    // Formateador de números (miles y decimales)
+    const fmt = new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: c.es_entero ? 0 : 2,
+      maximumFractionDigits: c.es_entero ? 0 : 2
+    });
 
-    cont.insertAdjacentHTML("beforeend", `
-      <div class="col-6 col-lg-3 mb-4">
-        <div class="card shadow-sm text-center border-top-0 rounded-3 overflow-hidden">
-          <div class="kpi-header bg-${c.id}">${c.titulo}</div>
-          <div class="card-body">
-            <h2 class="display-6">${c.avance_fmt}</h2>
-            <div class="kpi-meta">Meta ${c.meta_fmt}</div>
-            <div class="kpi-pendiente">Pendiente ${c.pendiente_fmt}</div>
-            <div class="position-relative">
-              <canvas id="donut-${c.id}" height="130"></canvas>
-              <div class="donut-label fw-bold" style="color:${colorPorId(c.id)}">${c.pct.toFixed(0)}%</div>
+    const html = `
+      <div class="col-12 col-md-6 col-lg-3 mb-4">
+        <div class="card shadow-sm h-100 border-0 overflow-hidden">
+          <div class="card-header text-white fw-bold text-center py-2" 
+               style="background-color: ${window.COLORES[c.id]}; font-size: 1.1rem;">
+            ${c.titulo}
+          </div>
+          
+          <div class="card-body text-center position-relative">
+            <h2 class="display-6 fw-bold mb-0 text-dark">${fmt.format(avance)}</h2>
+            
+            <div class="small text-muted mb-3">
+              Meta: ${fmt.format(meta)} <span class="mx-1">|</span> Pendiente: ${fmt.format(pendiente)}
             </div>
+            
+            <div style="height: 160px; position: relative;">
+              <canvas id="chart-${c.id}"></canvas>
+              
+              <div class="position-absolute top-50 start-50 translate-middle fw-bold" 
+                   style="color: ${window.COLORES[c.id]}; font-size: 1.5rem;">
+                ${pct.toFixed(1)}%
+              </div>
+            </div>
+
           </div>
         </div>
       </div>
-    `);
-    dibujarDonut(`donut-${c.id}`, c.pct, c.id);
+    `;
+    cont.insertAdjacentHTML("beforeend", html);
+
+    // Dibujar la gráfica
+    renderDonut(`chart-${c.id}`, avance, pendiente, c.id, fmt);
   });
 }
 
-function dibujarDonut(id, porcentaje, tipo) {
-  const ctx = document.getElementById(id);
+function renderDonut(canvasId, avance, pendiente, tipo, formatter) {
+  const ctx = document.getElementById(canvasId);
   if (!ctx) return;
 
   new Chart(ctx, {
@@ -76,178 +159,159 @@ function dibujarDonut(id, porcentaje, tipo) {
     data: {
       labels: ["Avance", "Pendiente"],
       datasets: [{
-        data: [porcentaje, 100 - porcentaje],
-        backgroundColor: [colorPorId(tipo), "#e0e0e0"],
-        borderWidth: 0
+        data: [avance, pendiente],
+        backgroundColor: [window.COLORES[tipo], window.COLORES.gris],
+        borderWidth: 0,
+        hoverOffset: 4
       }]
     },
     options: {
-      cutout: "60%",
+      responsive: true,
+      maintainAspectRatio: false,
+      // 🔥 AQUÍ ESTÁ EL AJUSTE DE GROSOR:
+      // 50% = Dona gruesa. (Antes estaba en 75% o 60%)
+      cutout: "50%", 
       plugins: {
         legend: { display: false },
-        tooltip: { enabled: false }
+        tooltip: {
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          callbacks: {
+            label: function(context) {
+              let label = context.label || '';
+              if (label) label += ': ';
+              if (context.parsed !== null) {
+                label += formatter.format(context.parsed);
+              }
+              return label;
+            }
+          }
+        }
       }
     }
   });
 }
 
-function colorPorId(id) {
-  const colores = {
-    abasto: "#004634",     // Verde oscuro
-    entregado: "#146B4D",  // Verde medio
-    dh: "#6A1B3F",         // Vino
-    superficie: "#A1760E"  // Oro oscuro
-  };
-  return colores[id] || "#999";
-}
+// ==========================================
+//  RESUMEN ESTATAL (Tabla)
+// ==========================================
 
-// ====== Filtros KPI ======
-function cargarFiltros() {
-  fetch("/api/filtros_kpi/")
+function cargarResumen() {
+  const tbody = document.querySelector("#tabla_estados tbody");
+  if (!tbody) return;
+
+  const u = document.getElementById("filtro_unidad")?.value || "";
+  const e = document.getElementById("filtro_estado")?.value || "";
+  const tm = document.getElementById("filtro_tipo_meta")?.value || "operativa";
+  
+  const params = new URLSearchParams({ unidad_operativa: u, estado: e, tipo_meta: tm });
+  
+  fetch(`/api/kpi/resumen-por-estado/?${params}`)
     .then(r => r.json())
-    .then(data => {
-      const unidadSel = document.getElementById("unidad_operativa");
-      const estadoSel = document.getElementById("estado");
-
-      if (unidadSel && estadoSel) {
-        data.unidades.forEach(u => {
-          const opt = document.createElement("option");
-          opt.value = u;
-          opt.textContent = u;
-          unidadSel.appendChild(opt);
-        });
-
-        data.estados.forEach(e => {
-          const opt = document.createElement("option");
-          opt.value = e;
-          opt.textContent = e;
-          estadoSel.appendChild(opt);
-        });
-      }
-    });
-}
-
-// ====== Tabla Resumen por Estado ======
-function cargarResumenPorEstado() {
-  const unidad = document.getElementById("filtro_unidad")?.value.trim() || "";
-  const estado = document.getElementById("filtro_estado")?.value.trim() || "";
-  const tipo_meta = document.getElementById("filtro_tipo_meta")?.value || "operativa";
-
-  const params = new URLSearchParams();
-  if (unidad) params.append("unidad_operativa", unidad);
-  if (estado) params.append("estado", estado);
-  params.append("tipo_meta", tipo_meta);
-
-  console.log("📤 Enviando solicitud con filtros:", { unidad, estado, tipo_meta });
-
-  fetch(`/api/kpi/resumen-por-estado/?${params.toString()}`)
-    .then(response => response.json())
-    .then(data => {
-      const tbody = document.querySelector("#tabla_estados tbody");
-      if (!tbody) return;
-
+    .then(resp => {
+      const data = resp.resultados || [];
       tbody.innerHTML = "";
 
-      // 🔽 Ordenar por % de derechohabientes apoyados en orden descendente
-      data.sort((a, b) => {
-        const pctA = a.meta_dh ? a.dh_apoyados / a.meta_dh : 0;
-        const pctB = b.meta_dh ? b.dh_apoyados / b.meta_dh : 0;
-        return pctB - pctA;
-      });
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="17" class="text-center py-4 text-muted">No hay datos.</td></tr>`;
+        return;
+      }
 
-      // 📊 Acumulador de totales nacionales
-      const total = {
-        estado: "TOTAL",
-        meta_total_ton: 0,
-        abasto: 0,
-        entregado: 0,
-        meta_dh: 0,
-        dh_apoyados: 0,
-        meta_ha: 0,
-        ha_apoyadas: 0
-      };
+      data.sort((a, b) => b.pct_entregado - a.pct_entregado);
 
-      // 🖊️ Pintar la tabla ordenada y acumular totales
+      let tMetaTon=0, tAbasto=0, tEnt=0, tMetaDh=0, tDh=0, tMetaHa=0, tHa=0;
+
       data.forEach(r => {
-        total.meta_total_ton += parseFloat(r.meta_total_ton || 0);
-        total.abasto += parseFloat(r.abasto || 0);
-        total.entregado += parseFloat(r.entregado || 0);
-        total.meta_dh += parseFloat(r.meta_dh || 0);
-        total.dh_apoyados += parseFloat(r.dh_apoyados || 0);
-        total.meta_ha += parseFloat(r.meta_ha || 0);
-        total.ha_apoyadas += parseFloat(r.ha_apoyadas || 0);
+        tMetaTon += r.meta_total_ton; tAbasto += r.abasto; tEnt += r.entregado;
+        tMetaDh += r.meta_dh; tDh += r.dh_apoyados;
+        tMetaHa += r.meta_ha; tHa += r.ha_apoyadas;
 
         tbody.insertAdjacentHTML("beforeend", `
           <tr>
-            <td class="estado">${r.estado}</td>
-            ${colKPI(r.meta_total_ton, r.abasto, "abasto")}
-            ${colKPI(r.meta_total_ton, r.entregado, "entregado")}
-            ${colKPI(r.meta_dh, r.dh_apoyados, "dh")}
-            ${colKPI(r.meta_ha, r.ha_apoyadas, "superficie")}
+            <td class="estado bg-light fw-bold text-start ps-3">${r.estado}</td>
+            ${colTabla(r.meta_total_ton, r.abasto, "abasto")}
+            ${colTabla(r.meta_total_ton, r.entregado, "entregado")}
+            ${colTabla(r.meta_dh, r.dh_apoyados, "dh", true)}
+            ${colTabla(r.meta_ha, r.ha_apoyadas, "superficie", true)}
           </tr>
         `);
       });
 
-      // ➕ Fila total nacional al final
       tbody.insertAdjacentHTML("beforeend", `
-        <tr class="fw-bold">
-          <td class="estado bg-secondary text-white">TOTAL NACIONAL</td>
-          ${colKPI(total.meta_total_ton, total.abasto, "abasto", true)}
-          ${colKPI(total.meta_total_ton, total.entregado, "entregado", true)}
-          ${colKPI(total.meta_dh, total.dh_apoyados, "dh", true)}
-          ${colKPI(total.meta_ha, total.ha_apoyadas, "superficie", true)}
+        <tr class="fw-bold table-secondary border-top border-3 border-dark">
+          <td class="text-start ps-3">TOTAL NACIONAL</td>
+          ${colTabla(tMetaTon, tAbasto, "abasto")}
+          ${colTabla(tMetaTon, tEnt, "entregado")}
+          ${colTabla(tMetaDh, tDh, "dh", true)}
+          ${colTabla(tMetaHa, tHa, "superficie", true)}
         </tr>
       `);
 
-      // 🟢 Activar animación progresiva de barras
       setTimeout(() => {
-        document.querySelectorAll("#tabla_estados .progress-bar").forEach(bar => {
-          const pct = bar.dataset.pct;
-          bar.style.width = `${pct}%`;
-        });
-      }, 10);
-
-      console.log("📥 Datos recibidos y ordenados:", data);
-    })
-    .catch(error => {
-      console.error("Error cargando resumen por estado:", error);
+        document.querySelectorAll(".progress-bar").forEach(b => b.style.width = b.dataset.width);
+      }, 50);
     });
 }
 
-
-function colKPI(meta, avance, tipo, esTotal = false) {
-  const numMeta = parseFloat(meta) || 0;
-  const numAvance = parseFloat(avance) || 0;
-  const pendiente = Math.max(numMeta - numAvance, 0);
-  const pct = numMeta ? Math.min(100, Math.floor(numAvance * 100 / numMeta)) : 0;
-  const color = colorPorId(tipo);
-
-  const formatoNumerico = (n) => {
-    const num = parseFloat(n) || 0;
-    if (tipo === "abasto" || tipo === "entregado") {
-      return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    } else {
-      return num.toLocaleString('en-US'); // sin decimales
-    }
-  };
-
-  const fondo = esTotal ? `bg-${tipo} text-white` : "";
+function colTabla(meta, avance, tipo, esEntero = false) {
+  meta = parseFloat(meta) || 0;
+  avance = parseFloat(avance) || 0;
+  const pend = Math.max(meta - avance, 0);
+  const pct = meta > 0 ? Math.min(100, (avance / meta) * 100) : 0;
+  
+  const fmt = new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: esEntero ? 0 : 1,
+    maximumFractionDigits: esEntero ? 0 : 1
+  });
 
   return `
-    <td class="meta ${fondo}">${formatoNumerico(numMeta)}</td>
-    <td class="avance ${fondo}">${formatoNumerico(numAvance)}</td>
-    <td class="pendiente ${fondo}">${formatoNumerico(pendiente)}</td>
-    <td class="col-porcentaje ${fondo}">
-      <div class="progress">
-        <div class="progress-bar ${tipo}" data-pct="${pct}" style="width: 0%">
-          ${pct}%
-        </div>
+    <td class="meta text-muted small">${fmt.format(meta)}</td>
+    <td class="avance fw-bold">${fmt.format(avance)}</td>
+    <td class="pendiente text-muted small">${fmt.format(pend)}</td>
+    <td class="col-porcentaje p-1 align-middle">
+      <div class="progress position-relative" style="height: 18px; background-color: #e9ecef;">
+        <div class="progress-bar ${tipo}" data-width="${pct}%" style="width: 0%;"></div>
+        <span class="position-absolute w-100 text-center text-dark" 
+              style="font-size: 0.7rem; top: 1px; font-weight: bold; text-shadow: 0 0 2px white;">
+          ${pct.toFixed(1)}%
+        </span>
       </div>
     </td>
   `;
 }
 
+// ==========================================
+//  FILTROS
+// ==========================================
+function cargarFiltros(modo) {
+  fetch("/api/filtros_kpi/")
+    .then(r => r.json())
+    .then(data => {
+      if (modo === "select") {
+        llenarSelect("unidad_operativa", data.unidades);
+        llenarSelect("estado", data.estados);
+      } else {
+        llenarDatalist("coord", data.unidades);
+        llenarDatalist("estados", data.estados);
+      }
+    });
+}
 
+function llenarSelect(id, items) {
+  const el = document.getElementById(id);
+  if(el) {
+    el.innerHTML = '<option value="">-- Todas --</option>';
+    items.forEach(i => el.add(new Option(i, i)));
+  }
+}
 
-
-
+function llenarDatalist(id, items) {
+  const el = document.getElementById(id);
+  if(el) {
+    el.innerHTML = "";
+    items.forEach(i => {
+      const op = document.createElement("option");
+      op.value = i;
+      el.appendChild(op);
+    });
+  }
+}

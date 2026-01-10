@@ -1,78 +1,143 @@
 {% extends 'fertilizantes/base.html' %}
 
-{% block title %}Inicio - Programa de Fertilizantes{% endblock %}
+{% block title %}Inicio{% endblock %}
 
 {% block content %}
-<div class="container mt-5">
+<div class="container mt-4">
 
-    <div class="text-center mb-5">
-        <h1>Programa de Fertilizantes</h1>
-        <p class="lead">Sistema de Monitoreo y Administración de Bases de Datos</p>
+  <div class="row align-items-center mb-5">
+    <div class="col-md-8">
+      <h1 class="h3 fw-bold" style="color: #264e46;">Programa de Fertilizantes</h1>
+      <p class="text-secondary mb-1">
+        Sistema de monitoreo y administración de bases de datos.
+      </p>
+      <div class="d-flex align-items-center">
+        <span class="text-muted me-2 small">Estás trabajando con el año de operación:</span>
+        {% if anio_activo == "2026" %}
+          <span class="badge rounded-pill" style="background-color:#264e46;">{{ anio_activo }}</span>
+        {% else %}
+          <span class="badge rounded-pill bg-danger">{{ anio_activo }}</span>
+        {% endif %}
+      </div>
+    </div>
+    
+    <div class="col-md-4 text-md-end mt-3 mt-md-0">
+      <a href="{% url 'seleccionar_anio' %}" class="btn btn-dark border-0 px-4"
+         style="background-color:#264e46;">
+         <i class="bi bi-calendar-event me-2"></i>Cambiar año
+      </a>
+    </div>
+  </div>
+
+  <div class="row g-4">
+
+    <div class="col-md-4">
+      <div class="card shadow-sm h-100 border-0" style="background-color: #f8f9fa;"> <div class="card-body d-flex flex-column p-4 bg-white rounded border">
+          <h5 class="card-title fw-bold text-dark mb-3">
+            <i class="bi bi-arrow-repeat me-2" style="color: #264e46;"></i> Actualización
+          </h5>
+          <p class="card-text text-secondary flex-grow-1">
+            Ejecutar procesos de carga y actualización de todas las bases de datos
+            del año seleccionado ({{ anio_activo }}).
+          </p>
+          <a href="{% url 'actualizacion' %}" class="btn w-100 py-2 fw-medium"
+             style="background-color:#264e46; color:white;">
+            Ir
+          </a>
+        </div>
+      </div>
     </div>
 
-    <div class="row row-cols-1 row-cols-md-3 g-4">
-
-        <div class="col">
-            <div class="card h-100 text-center">
-                <div class="card-body">
-                    <h5 class="card-title">Actualización</h5>
-                    <p class="card-text">Actualizar todas las bases de datos.</p>
-                    <a href="/actualizacion/" class="btn btn-success">Ir</a>
-                </div>
-            </div>
+    <div class="col-md-4">
+      <div class="card shadow-sm h-100 border-0">
+        <div class="card-body d-flex flex-column p-4 bg-white rounded border">
+          <h5 class="card-title fw-bold text-dark mb-3">
+            <i class="bi bi-file-earmark-text me-2" style="color: #264e46;"></i> Integrar Informe
+          </h5>
+          <p class="card-text text-secondary flex-grow-1">
+            Generar el informe consolidado con los principales indicadores
+            del año {{ anio_activo }}.
+          </p>
+          <a href="{% url 'actualizacion' %}" class="btn w-100 py-2 fw-medium"
+             style="background-color:#264e46; color:white;">
+            Ir
+          </a>
         </div>
-
-        <div class="col">
-            <div class="card h-100 text-center">
-                <div class="card-body">
-                    <h5 class="card-title">Integrar Informe</h5>
-                    <p class="card-text">Generar informe consolidado.</p>
-                    <a href="#" class="btn btn-success">Ir</a>
-                </div>
-            </div>
-        </div>
-
-        <div class="col">
-            <div class="card h-100 text-center">
-                <div class="card-body">
-                    <h5 class="card-title">Vistas</h5>
-                    <p class="card-text">Consultar tablas resumidas.</p>
-                    <a href="/vistas/" class="btn btn-success">Ir</a>
-                </div>
-            </div>
-        </div>
-
-        <div class="col">
-            <div class="card h-100 text-center">
-                <div class="card-body">
-                    <h5 class="card-title">Reportes</h5>
-                    <p class="card-text">Generar reportes operativos.</p>
-                    <a href="/reportes/" class="btn btn-success">Ir</a>
-                </div>
-            </div>
-        </div>
-
-        <div class="col">
-            <div class="card h-100 text-center">
-                <div class="card-body">
-                    <h5 class="card-title">Visualización</h5>
-                    <p class="card-text">Ver gráficos y mapas.</p>
-                    <a href="/visualizacion/" class="btn btn-success">Ir</a>
-                </div>
-            </div>
-        </div>
-
-        <div class="col">
-            <div class="card h-100 text-center">
-                <div class="card-body">
-                    <h5 class="card-title">Gestión de Datos</h5>
-                    <p class="card-text">Registrar o modificar información.</p>
-                    <a href="#" class="btn btn-success">Ir</a>
-                </div>
-            </div>
-        </div>
-
+      </div>
     </div>
 
+    <div class="col-md-4">
+      <div class="card shadow-sm h-100 border-0">
+        <div class="card-body d-flex flex-column p-4 bg-white rounded border">
+          <h5 class="card-title fw-bold text-dark mb-3">
+            <i class="bi bi-table me-2" style="color: #264e46;"></i> Vistas
+          </h5>
+          <p class="card-text text-secondary flex-grow-1">
+            Consultar tablas resumidas para seguimiento operativo
+            (inventarios, remanentes, fletes, etc.).
+          </p>
+          <a href="{% url 'vistas' %}" class="btn w-100 py-2 fw-medium"
+             style="background-color:#264e46; color:white;">
+            Ir
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card shadow-sm h-100 border-0">
+        <div class="card-body d-flex flex-column p-4 bg-white rounded border">
+          <h5 class="card-title fw-bold text-dark mb-3">
+            <i class="bi bi-clipboard-data me-2" style="color: #264e46;"></i> Reportes
+          </h5>
+          <p class="card-text text-secondary flex-grow-1">
+            Generar reportes operativos en detalle (por estado, CEDA,
+            unidad operativa, entre otros criterios).
+          </p>
+          <a href="{% url 'reportes' %}" class="btn w-100 py-2 fw-medium"
+             style="background-color:#264e46; color:white;">
+            Ir
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card shadow-sm h-100 border-0">
+        <div class="card-body d-flex flex-column p-4 bg-white rounded border">
+          <h5 class="card-title fw-bold text-dark mb-3">
+            <i class="bi bi-graph-up-arrow me-2" style="color: #264e46;"></i> Visualización
+          </h5>
+          <p class="card-text text-secondary flex-grow-1">
+            Ver dashboards, gráficas y mapas interactivos del año {{ anio_activo }}.
+          </p>
+          <a href="{% url 'visualizacion' %}" class="btn w-100 py-2 fw-medium"
+             style="background-color:#264e46; color:white;">
+            Ir
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card shadow-sm h-100 border-0">
+        <div class="card-body d-flex flex-column p-4 bg-white rounded border">
+          <h5 class="card-title fw-bold text-dark mb-3">
+            <i class="bi bi-database-gear me-2" style="color: #264e46;"></i> Gestión de Datos
+          </h5>
+          <p class="card-text text-secondary flex-grow-1">
+            Registrar o modificar información ya cargada en la base de datos
+            (correcciones puntuales, comentarios, etc.).
+          </p>
+          <a href="#" class="btn w-100 py-2 fw-medium disabled"
+             style="background-color:#e0e0e0; color:#888; border: none;"
+             title="Módulo en construcción">
+            Próximamente
+          </a>
+        </div>
+      </div>
+    </div>
+
+  </div>
 </div>
 {% endblock %}

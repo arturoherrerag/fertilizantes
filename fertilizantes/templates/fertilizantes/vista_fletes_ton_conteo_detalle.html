@@ -4,75 +4,234 @@
 {% block title %}Fletes por Toneladas Iniciales{% endblock %}
 
 {% block content %}
-<h2 class="mb-4">🚛 Fletes según Toneladas Iniciales</h2>
 
-<form method="get" class="row g-3 mb-4" id="filtros-form">
-  <div class="col-md-3">
-    <label for="unidad_operativa">Unidad Operativa:</label>
-    <select name="unidad_operativa" id="unidad_operativa" class="form-select">
-      <option value="">-- Todas --</option>
-      {% for u in unidades %}
-        <option value="{{ u }}" {% if u == unidad_seleccionada %}selected{% endif %}>{{ u }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="col-md-3">
-    <label for="estado">Estado:</label>
-    <select name="estado" id="estado" class="form-select">
-      <option value="">-- Todos --</option>
-      {% for e in estados %}
-        <option value="{{ e }}" {% if e == estado_seleccionado %}selected{% endif %}>{{ e }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="col-md-3">
-    <label for="estado_procedencia">Estado Procedencia:</label>
-    <select name="estado_procedencia" id="estado_procedencia" class="form-select">
-      <option value="">-- Todos --</option>
-      {% for p in procedencias %}
-        <option value="{{ p }}" {% if p == procedencia_seleccionada %}selected{% endif %}>{{ p }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="col-md-3">
-    <label for="buscar_ceda">Buscar por CEDA:</label>
-	<input type="text" name="buscar_ceda" value="{{ buscar_ceda|default_if_none:'' }}" class="form-control" placeholder="ID CEDA Agricultura">
-  </div>
-  <div class="col-12 d-flex justify-content-end">
-    <button type="submit" class="btn btn-primary">🔍 Aplicar Filtros</button>
-  </div>
-</form>
+<style>
+    /* --- Estilos Institucionales (Para la tabla visible) --- */
+    .tabla-header-institucional th {
+        background-color: #264e46 !important;
+        color: #ffffff !important;
+        font-weight: 500;
+        border: 1px solid rgba(255,255,255,0.1);
+        vertical-align: middle;
+        text-align: center;
+        white-space: nowrap;
+    }
 
-<div class="table-responsive mt-4">
-  <table class="table table-bordered table-striped table-hover table-sm align-middle text-center">
-    <thead class="table-light">
-      <tr>
-        <th style="white-space: nowrap;">Unidad Operativa</th>
-        <th style="white-space: nowrap;">Estado</th>
-        <th style="white-space: nowrap;">Zona Operativa</th>
-        <th style="white-space: nowrap;">ID CEDA</th>
-        <th style="white-space: nowrap;">Nombre del CEDA</th>
-        <th style="white-space: nowrap;">Estado Procedencia</th>
-        <th style="white-space: nowrap;">Toneladas Iniciales</th>
-        <th style="white-space: nowrap;">Fletes DAP</th>
-        <th style="white-space: nowrap;">Fletes UREA</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for fila in datos %}
-      <tr>
-        <td style="white-space: nowrap;">{{ fila.unidad_operativa }}</td>
-        <td style="white-space: nowrap;">{{ fila.estado }}</td>
-        <td style="white-space: nowrap;">{{ fila.zona_operativa }}</td>
-        <td style="white-space: nowrap;">{{ fila.id_ceda_agricultura }}</td>
-        <td style="white-space: nowrap;">{{ fila.nombre_cedas }}</td>
-        <td style="white-space: nowrap;">{{ fila.estado_procedencia }}</td>
-        <td style="white-space: nowrap;">{{ fila.toneladas_iniciales|formato_mx:3 }}</td>
-        <td style="white-space: nowrap;">{{ fila.cantidad_fletes_dap|formato_mx }}</td>
-        <td style="white-space: nowrap;">{{ fila.cantidad_fletes_urea|formato_mx }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+    .dato-numero {
+        font-family: 'Consolas', 'Monaco', monospace;
+        font-weight: 600;
+        color: #161a1d;
+    }
+
+    /* --- TRUCO PARA LA TABLA DE EXPORTACIÓN --- */
+    /* La ocultamos visualmente pero la dejamos "renderizada" para el DOM */
+    #contenedor-tabla-oculta {
+        height: 0px;
+        width: 0px;
+        overflow: hidden;
+        position: absolute;
+        left: -9999px;
+    }
+</style>
+
+<div class="container mt-4 mb-5">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 fw-bold" style="color: #264e46;">
+                <i class="bi bi-truck me-2"></i>Fletes según Toneladas Iniciales
+            </h1>
+            <p class="text-secondary mb-0">
+                Análisis de carga inicial por flete y procedencia.
+            </p>
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-success btn-sm text-white" onclick="descargarCSV()">
+                <i class="bi bi-file-earmark-excel me-1"></i> Descargar CSV
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+                <i class="bi bi-printer me-1"></i> Imprimir
+            </button>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4 bg-light">
+        <div class="card-body p-4">
+            <h6 class="card-title fw-bold text-secondary mb-3">
+                <i class="bi bi-funnel me-1"></i> Filtros de Búsqueda
+            </h6>
+            <form method="get" class="row g-3 align-items-end" id="filtros-form">
+                <div class="col-md-3">
+                    <label for="unidad_operativa" class="form-label small text-muted text-uppercase fw-bold">Unidad Operativa</label>
+                    <select name="unidad_operativa" id="unidad_operativa" class="form-select border-0 shadow-sm">
+                        <option value="">-- Todas --</option>
+                        {% for u in unidades %}
+                            <option value="{{ u }}" {% if u == unidad_seleccionada %}selected{% endif %}>{{ u }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="estado" class="form-label small text-muted text-uppercase fw-bold">Estado</label>
+                    <select name="estado" id="estado" class="form-select border-0 shadow-sm">
+                        <option value="">-- Todos --</option>
+                        {% for e in estados %}
+                            <option value="{{ e }}" {% if e == estado_seleccionado %}selected{% endif %}>{{ e }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="estado_procedencia" class="form-label small text-muted text-uppercase fw-bold">Procedencia</label>
+                    <select name="estado_procedencia" id="estado_procedencia" class="form-select border-0 shadow-sm">
+                        <option value="">-- Todos --</option>
+                        {% for p in procedencias %}
+                            <option value="{{ p }}" {% if p == procedencia_seleccionada %}selected{% endif %}>{{ p }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn text-white w-100 shadow-sm" style="background-color: #264e46;">
+                        <i class="bi bi-search me-2"></i>Aplicar Filtros
+                    </button>
+                </div>
+                {% if buscar_ceda %}
+                <input type="hidden" name="buscar_ceda" value="{{ buscar_ceda }}">
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive rounded-top">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="tabla-header-institucional">
+                        <tr>
+                            <th class="ps-3 text-start">Ubicación (Unidad / Estado)</th>
+                            <th class="text-start">CEDA</th>
+                            <th>Procedencia</th>
+                            <th>Ton. Iniciales</th>
+                            <th>Fletes DAP</th>
+                            <th>Fletes UREA</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for fila in datos %}
+                        <tr>
+                            <td class="ps-3">
+                                <span class="d-block fw-bold text-dark">{{ fila.unidad_operativa }}</span>
+                                <small class="text-muted">{{ fila.estado }} | {{ fila.zona_operativa }}</small>
+                            </td>
+                            <td>
+                                <span class="d-block fw-medium text-dark">{{ fila.nombre_cedas }}</span>
+                                <small class="text-muted font-monospace" style="font-size: 0.75rem;">
+                                    ID: {{ fila.id_ceda_agricultura }}
+                                </small>
+                            </td>
+                            <td class="text-center text-secondary">
+                                {{ fila.estado_procedencia }}
+                            </td>
+                            <td class="text-center dato-numero text-dark">
+                                {{ fila.toneladas_iniciales|formato_mx:3 }}
+                            </td>
+                            <td class="text-center dato-numero text-secondary">
+                                {{ fila.cantidad_fletes_dap|formato_mx }}
+                            </td>
+                            <td class="text-center dato-numero text-secondary">
+                                {{ fila.cantidad_fletes_urea|formato_mx }}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                No se encontraron registros con los filtros seleccionados.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="mt-3 text-end">
+        <small class="text-muted fst-italic">
+            * Se muestran columnas combinadas. Al descargar el CSV obtendrá las columnas separadas.
+        </small>
+    </div>
+
 </div>
+
+<div id="contenedor-tabla-oculta">
+    <table id="tabla-exportar">
+        <thead>
+            <tr>
+                <th>Unidad Operativa</th>
+                <th>Estado</th>
+                <th>Zona Operativa</th>
+                <th>ID CEDA</th>
+                <th>Nombre CEDA</th>
+                <th>Estado Procedencia</th>
+                <th>Toneladas Iniciales</th>
+                <th>Fletes DAP</th>
+                <th>Fletes UREA</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for fila in datos %}
+            <tr>
+                <td>{{ fila.unidad_operativa }}</td>
+                <td>{{ fila.estado }}</td>
+                <td>{{ fila.zona_operativa }}</td>
+                <td>{{ fila.id_ceda_agricultura }}</td>
+                <td>{{ fila.nombre_cedas }}</td>
+                <td>{{ fila.estado_procedencia }}</td>
+                <td>{{ fila.toneladas_iniciales|formato_mx:3 }}</td>
+                <td>{{ fila.cantidad_fletes_dap|formato_mx }}</td>
+                <td>{{ fila.cantidad_fletes_urea|formato_mx }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function descargarCSV() {
+        // Seleccionamos la tabla OCULTA
+        const tabla = document.getElementById("tabla-exportar");
+        let filas = Array.from(tabla.querySelectorAll("tr"));
+        
+        let csvContent = filas.map(fila => {
+            let celdas = Array.from(fila.querySelectorAll("th, td"));
+            return celdas.map(celda => {
+                // CAMBIO CRUCIAL: Usamos .textContent en lugar de .innerText
+                // textContent lee el texto aunque el elemento esté oculto
+                let texto = celda.textContent.replace(/(\r\n|\n|\r)/gm, " ").trim();
+                
+                // Si el dato tiene comas, lo encerramos entre comillas
+                if (texto.includes(",")) {
+                    return `"${texto}"`;
+                }
+                return texto;
+            }).join(","); 
+        }).join("\n"); 
+
+        // BOM para que Excel reconozca acentos
+        const bom = "\uFEFF"; 
+        const blob = new Blob([bom + csvContent], { type: "text/csv;charset=utf-8;" });
+        
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", "Fletes_Toneladas_Iniciales.csv");
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+</script>
 {% endblock %}

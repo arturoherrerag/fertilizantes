@@ -1,109 +1,205 @@
 {% extends 'fertilizantes/base.html' %}
 {% load formatos %}
+
 {% block title %}CEDAs con Inventario Negativo de Remanente{% endblock %}
+
 {% block content %}
 
-<h2>📉 CEDAs con Inventario Negativo de Remanente</h2>
+<style>
+    /* --- Estilos Institucionales --- */
+    .tabla-header-institucional th {
+        background-color: #264e46 !important;
+        color: #ffffff !important;
+        font-weight: 500;
+        border: 1px solid rgba(255,255,255,0.1);
+        vertical-align: middle;
+        text-align: center;
+    }
 
-<form method="get" class="row g-3 mb-4" id="filtros-form">
-  <div class="col-md-4">
-    <label for="unidad_operativa">Unidad Operativa:</label>
-    <select name="unidad_operativa" id="unidad_operativa" class="form-select">
-      <option value="">-- Todas --</option>
-      {% for u in unidades %}
-        <option value="{{ u }}" {% if u == unidad_seleccionada %}selected{% endif %}>{{ u }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="col-md-4">
-    <label for="estado">Estado:</label>
-    <select name="estado" id="estado" class="form-select">
-      <option value="">-- Todos --</option>
-      {% for e in estados %}
-        <option value="{{ e }}" {% if e == estado_seleccionado %}selected{% endif %}>{{ e }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="col-md-4">
-    <label for="zona_operativa">Zona Operativa:</label>
-    <select name="zona_operativa" id="zona_operativa" class="form-select">
-      <option value="">-- Todas --</option>
-      {% for z in zonas %}
-        <option value="{{ z }}" {% if z == zona_seleccionada %}selected{% endif %}>{{ z }}</option>
-      {% endfor %}
-    </select>
-  </div>
-</form>
+    /* Estilo de Alerta Crítica (Negativos) */
+    .celda-negativa {
+        background-color: #fdf2f2 !important; /* Fondo rojo muy pálido */
+        color: #dc3545 !important; /* Texto rojo */
+        font-weight: 700;
+        border-left: 3px solid #dc3545 !important; /* Borde de alerta */
+    }
 
-<!-- Botón para aplicar filtros -->
-<div class="mb-4">
-  <button type="submit" form="filtros-form" class="btn btn-primary">Aplicar Filtros</button>
+    /* Estilo para ceros (Guion sutil) */
+    .valor-cero {
+        color: #e9ecef !important;
+        font-weight: 300;
+        text-align: center;
+        display: block;
+    }
+</style>
+
+<div class="container mt-4 mb-5">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 fw-bold text-danger">
+                <i class="bi bi-exclamation-triangle me-2"></i>Negativos de Remanente
+            </h1>
+            <p class="text-secondary mb-0">
+                CEDAs que presentan inventario físico remanente menor a cero.
+            </p>
+        </div>
+        <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+            <i class="bi bi-printer me-1"></i> Imprimir
+        </button>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4 bg-light">
+        <div class="card-body p-4">
+            <h6 class="card-title fw-bold text-secondary mb-3">
+                <i class="bi bi-funnel me-1"></i> Filtros de Búsqueda
+            </h6>
+            <form method="get" class="row g-3 align-items-end" id="filtros-form">
+                <div class="col-md-3">
+                    <label for="unidad_operativa" class="form-label small text-muted text-uppercase fw-bold">Unidad Operativa</label>
+                    <select name="unidad_operativa" id="unidad_operativa" class="form-select border-0 shadow-sm">
+                        <option value="">-- Todas --</option>
+                        {% for u in unidades %}
+                            <option value="{{ u }}" {% if u == unidad_seleccionada %}selected{% endif %}>{{ u }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="estado" class="form-label small text-muted text-uppercase fw-bold">Estado</label>
+                    <select name="estado" id="estado" class="form-select border-0 shadow-sm">
+                        <option value="">-- Todos --</option>
+                        {% for e in estados %}
+                            <option value="{{ e }}" {% if e == estado_seleccionado %}selected{% endif %}>{{ e }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="zona_operativa" class="form-label small text-muted text-uppercase fw-bold">Zona Operativa</label>
+                    <select name="zona_operativa" id="zona_operativa" class="form-select border-0 shadow-sm">
+                        <option value="">-- Todas --</option>
+                        {% for z in zonas %}
+                            <option value="{{ z }}" {% if z == zona_seleccionada %}selected{% endif %}>{{ z }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn text-white w-100 shadow-sm" style="background-color: #264e46;">
+                        <i class="bi bi-search me-2"></i>Aplicar Filtros
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive rounded-top">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="tabla-header-institucional">
+                        <tr>
+                            <th rowspan="2" class="ps-3 text-start">Ubicación (Unidad / Estado)</th>
+                            <th rowspan="2" class="text-start">CEDA (Nombre / Zona / ID)</th>
+                            <th colspan="2" class="bg-danger text-white border-start" style="background-color: #a71d2a !important;">Inventario Negativo (Ton)</th>
+                        </tr>
+                        <tr>
+                            <th class="border-start text-danger bg-light" style="width: 15%; font-size: 0.9rem;">DAP</th>
+                            <th class="text-danger bg-light" style="width: 15%; font-size: 0.9rem;">UREA</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for fila in datos %}
+                        <tr>
+                            <td class="ps-3">
+                                <span class="d-block fw-bold text-dark">{{ fila.coordinacion_estatal }}</span>
+                                <small class="text-muted">{{ fila.estado }}</small>
+                            </td>
+
+                            <td>
+                                <span class="d-block fw-medium text-dark">{{ fila.nombre_cedas }}</span>
+                                <small class="text-muted d-block">
+                                    Zona: {{ fila.zona_operativa }}
+                                </small>
+                                <small class="text-muted font-monospace" style="font-size: 0.75rem;">
+                                    ID: {{ fila.id_ceda_agricultura }}
+                                </small>
+                            </td>
+
+                            <td class="text-end border-start {% if fila.dap_ton_remanente_inventario < 0 %}celda-negativa{% endif %}">
+                                {% if fila.dap_ton_remanente_inventario == 0 %}
+                                    <span class="valor-cero">-</span>
+                                {% else %}
+                                    {{ fila.dap_ton_remanente_inventario|formato_mx:3 }}
+                                {% endif %}
+                            </td>
+
+                            <td class="text-end {% if fila.urea_ton_remanente_inventario < 0 %}celda-negativa{% endif %}">
+                                {% if fila.urea_ton_remanente_inventario == 0 %}
+                                    <span class="valor-cero">-</span>
+                                {% else %}
+                                    {{ fila.urea_ton_remanente_inventario|formato_mx:3 }}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center py-5 text-muted">
+                                <i class="bi bi-check-circle fs-1 d-block mb-2 text-success"></i>
+                                ¡Excelente! No se encontraron remanentes negativos bajo los criterios seleccionados.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </div>
 
-<div class="table-responsive mt-4">
-  <table class="table table-bordered table-hover">
-    <thead style="background-color: #e0e0e0;">
-      <tr>
-        <th>Estado</th>
-        <th>Unidad Operativa</th>
-        <th>Zona Operativa</th>
-        <th>ID CEDA Agricultura</th>
-        <th>Nombre del CEDA</th>
-        <th>DAP Inventario Remanente</th>
-        <th>UREA Inventario Remanente</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for fila in datos %}
-      <tr>
-        <td>{{ fila.estado }}</td>
-        <td>{{ fila.coordinacion_estatal }}</td>
-        <td>{{ fila.zona_operativa }}</td>
-        <td>{{ fila.id_ceda_agricultura }}</td>
-        <td>{{ fila.nombre_cedas }}</td>
-        <td {% if fila.dap_ton_remanente_inventario < 0 %}style="color:red;"{% endif %}>
-          {{ fila.dap_ton_remanente_inventario|formato_mx:3 }}
-        </td>
-        <td {% if fila.urea_ton_remanente_inventario < 0 %}style="color:red;"{% endif %}>
-          {{ fila.urea_ton_remanente_inventario|formato_mx:3 }}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+{% endblock %}
 
-<!-- Filtros dependientes -->
+{% block extra_js %}
 <script>
-  const urlFiltros = "{% url 'ajax_filtros_generales' %}";
-  const tabla = "cedas_con_remanentes_negativos_2025";
+document.addEventListener('DOMContentLoaded', function() {
+    const urlFiltros = "{% url 'ajax_filtros_generales' %}";
+    const tabla = "cedas_con_remanentes_negativos_2025";
 
-  const unidadSelect = document.getElementById("unidad_operativa");
-  const estadoSelect = document.getElementById("estado");
-  const zonaSelect = document.getElementById("zona_operativa");
+    const unidadSelect = document.getElementById("unidad_operativa");
+    const estadoSelect = document.getElementById("estado");
+    const zonaSelect = document.getElementById("zona_operativa");
 
-  unidadSelect.addEventListener('change', () => {
-    fetch(`${urlFiltros}?unidad_operativa=${unidadSelect.value}&tabla=${tabla}`)
-      .then(res => res.json())
-      .then(data => {
-        estadoSelect.innerHTML = '<option value="">-- Todos --</option>';
-        data.estados.forEach(e => {
-          estadoSelect.innerHTML += `<option value="${e}">${e}</option>`;
+    // Función auxiliar para resetear selectores
+    const limpiarSelect = (sel) => {
+        sel.innerHTML = '<option value="">-- Todos --</option>';
+    };
+
+    if(unidadSelect) {
+        unidadSelect.addEventListener('change', () => {
+            fetch(`${urlFiltros}?unidad_operativa=${unidadSelect.value}&tabla=${tabla}`)
+              .then(res => res.json())
+              .then(data => {
+                limpiarSelect(estadoSelect);
+                data.estados.forEach(e => {
+                  estadoSelect.innerHTML += `<option value="${e}">${e}</option>`;
+                });
+                limpiarSelect(zonaSelect);
+              })
+              .catch(err => console.error(err));
         });
-        zonaSelect.innerHTML = '<option value="">-- Todas --</option>';
-      });
-  });
+    }
 
-  estadoSelect.addEventListener('change', () => {
-    fetch(`${urlFiltros}?estado=${estadoSelect.value}&unidad_operativa=${unidadSelect.value}&tabla=${tabla}`)
-      .then(res => res.json())
-      .then(data => {
-        zonaSelect.innerHTML = '<option value="">-- Todas --</option>';
-        data.zonas.forEach(z => {
-          zonaSelect.innerHTML += `<option value="${z}">${z}</option>`;
+    if(estadoSelect) {
+        estadoSelect.addEventListener('change', () => {
+            fetch(`${urlFiltros}?estado=${estadoSelect.value}&unidad_operativa=${unidadSelect.value}&tabla=${tabla}`)
+              .then(res => res.json())
+              .then(data => {
+                limpiarSelect(zonaSelect);
+                data.zonas.forEach(z => {
+                  zonaSelect.innerHTML += `<option value="${z}">${z}</option>`;
+                });
+              })
+              .catch(err => console.error(err));
         });
-      });
-  });
+    }
+});
 </script>
-
 {% endblock %}

@@ -5,89 +5,167 @@
 {% block title %}Inventarios Negativos Actuales{% endblock %}
 
 {% block content %}
-<h2>📉 Inventarios Negativos Actuales por CEDA</h2>
 
-<!-- Filtros -->
-<form method="get" id="filtros-form" class="row g-3 mb-4">
-  <div class="col-md-4">
-    <label for="unidad_operativa">Unidad Operativa:</label>
-    <select name="unidad_operativa" id="unidad_operativa" class="form-select">
-      <option value="">-- Todas --</option>
-      {% for u in unidades %}
-      <option value="{{ u }}" {% if u == unidad_seleccionada %}selected{% endif %}>{{ u }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="col-md-4">
-    <label for="estado">Estado:</label>
-    <select name="estado" id="estado" class="form-select">
-      <option value="">-- Todos --</option>
-      {% for e in estados %}
-      <option value="{{ e }}" {% if e == estado_seleccionado %}selected{% endif %}>{{ e }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="col-md-4">
-    <label for="zona_operativa">Zona Operativa:</label>
-    <select name="zona_operativa" id="zona_operativa" class="form-select">
-      <option value="">-- Todas --</option>
-      {% for z in zonas %}
-      <option value="{{ z }}" {% if z == zona_seleccionada %}selected{% endif %}>{{ z }}</option>
-      {% endfor %}
-    </select>
-  </div>
+<style>
+    /* Encabezado Verde Sólido */
+    .tabla-header-institucional th {
+        background-color: #264e46 !important;
+        color: #ffffff !important;
+        border-bottom: none;
+        vertical-align: middle;
+        font-weight: 500;
+        white-space: nowrap;
+    }
+    
+    /* Bordes limpios */
+    .table-bordered > :not(caption) > * > * {
+        border-width: 0 0 1px 0;
+    }
 
-  <div class="col-12">
-    <button type="submit" class="btn btn-primary mt-3">Aplicar Filtros</button>
-  </div>
-</form>
+    /* Estilo para resaltar valores negativos */
+    .valor-negativo {
+        color: #dc3545 !important; /* Rojo Bootstrap */
+        font-weight: 700;
+        background-color: rgba(220, 53, 69, 0.05); /* Fondo rojo muy sutil */
+    }
+</style>
 
-<!-- Tabla -->
-<div class="table-responsive mt-4">
-<table class="table table-bordered table-hover" style="width: 100%;">
-    <thead style="background-color: #e0e0e0;">
-        <tr>
-            <th>Unidad Operativa</th>
-            <th>Estado</th>
-            <th>Zona Operativa</th>
-            <th>ID CEDA Agricultura</th>
-            <th>Nombre del CEDA</th>
-            <th>DAP Inventario (ton)</th>
-            <th>UREA Inventario (ton)</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for fila in datos %}
-        <tr>
-            <td>{{ fila.unidad_operativa }}</td>
-            <td>{{ fila.estado }}</td>
-            <td>{{ fila.zona_operativa }}</td>
-            <td>{{ fila.id_ceda_agricultura }}</td>
-            <td>{{ fila.nombre_cedas }}</td>
-            <td {% if fila.dap_inventario < 0 %}style="color: red;"{% endif %}>{{ fila.dap_inventario|formato_mx:3 }}</td>
-            <td {% if fila.urea_inventario < 0 %}style="color: red;"{% endif %}>{{ fila.urea_inventario|formato_mx:3 }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div class="container mt-4 mb-5">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 fw-bold text-danger">
+                <i class="bi bi-graph-down-arrow me-2"></i>Inventarios Negativos Actuales
+            </h1>
+            <p class="text-secondary mb-0">
+                Monitoreo de CEDAs con saldo negativo en inventario físico o sistémico.
+            </p>
+        </div>
+        <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+            <i class="bi bi-printer me-1"></i> Imprimir
+        </button>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4" style="background-color: #f8f9fa;">
+        <div class="card-body p-4">
+            <h6 class="card-title fw-bold text-secondary mb-3">
+                <i class="bi bi-funnel me-1"></i> Filtros de Búsqueda
+            </h6>
+            <form method="get" id="filtros-form" class="row g-3">
+                <div class="col-md-4">
+                    <label for="unidad_operativa" class="form-label small text-muted text-uppercase fw-bold">Unidad Operativa</label>
+                    <select name="unidad_operativa" id="unidad_operativa" class="form-select border-0 shadow-sm">
+                        <option value="">-- Todas --</option>
+                        {% for u in unidades %}
+                            <option value="{{ u }}" {% if u == unidad_seleccionada %}selected{% endif %}>{{ u }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="estado" class="form-label small text-muted text-uppercase fw-bold">Estado</label>
+                    <select name="estado" id="estado" class="form-select border-0 shadow-sm">
+                        <option value="">-- Todos --</option>
+                        {% for e in estados %}
+                            <option value="{{ e }}" {% if e == estado_seleccionado %}selected{% endif %}>{{ e }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="zona_operativa" class="form-label small text-muted text-uppercase fw-bold">Zona Operativa</label>
+                    <select name="zona_operativa" id="zona_operativa" class="form-select border-0 shadow-sm">
+                        <option value="">-- Todas --</option>
+                        {% for z in zonas %}
+                            <option value="{{ z }}" {% if z == zona_seleccionada %}selected{% endif %}>{{ z }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-12 text-end mt-3">
+                    <button type="submit" class="btn text-white px-4" style="background-color: #264e46;">
+                        <i class="bi bi-search me-2"></i>Aplicar Filtros
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive rounded-top">
+                <table class="table table-hover mb-0 align-middle">
+                    
+                    <thead class="tabla-header-institucional">
+                        <tr>
+                            <th class="py-3 ps-3">Ubicación (Unidad / Estado)</th>
+                            <th>Zona / CEDA</th>
+                            <th class="text-end">DAP Inventario (ton)</th>
+                            <th class="text-end">UREA Inventario (ton)</th>
+                        </tr>
+                    </thead>
+                    
+                    <tbody>
+                        {% for fila in datos %}
+                        <tr>
+                            <td class="ps-3">
+                                <span class="d-block fw-bold text-dark">{{ fila.unidad_operativa }}</span>
+                                <small class="text-muted">{{ fila.estado }}</small>
+                            </td>
+                            
+                            <td>
+                                <span class="d-block fw-medium text-dark">{{ fila.nombre_cedas }}</span>
+                                <small class="text-muted">Zona: {{ fila.zona_operativa }} | ID: {{ fila.id_ceda_agricultura }}</small>
+                            </td>
+
+                            <td class="text-end {% if fila.dap_inventario < 0 %}valor-negativo{% else %}text-secondary{% endif %}">
+                                {{ fila.dap_inventario|formato_mx:3 }}
+                            </td>
+
+                            <td class="text-end {% if fila.urea_inventario < 0 %}valor-negativo{% else %}text-secondary{% endif %}">
+                                {{ fila.urea_inventario|formato_mx:3 }}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center py-5 text-muted">
+                                <i class="bi bi-check-circle fs-1 d-block mb-2 text-success"></i>
+                                ¡Excelente! No se encontraron inventarios negativos con los filtros actuales.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
 </div>
 
-<!-- Scripts -->
 <script src="{% static 'js/filtros_dependientes.js' %}"></script>
 <script>
-  const urlFiltros = "{% url 'ajax_filtros_generales' %}";
-  const tabla = "inventarios_negativos_2025";
+document.addEventListener('DOMContentLoaded', function() {
+    const urlFiltros = "{% url 'ajax_filtros_generales' %}";
+    const tabla = "inventarios_negativos_2025"; // Asegúrate que este nombre de tabla sea el correcto en tu backend
 
-  const unidadSelect = document.getElementById("unidad_operativa");
-  const estadoSelect = document.getElementById("estado");
-  const zonaSelect = document.getElementById("zona_operativa");
+    const unidadSelect = document.getElementById("unidad_operativa");
+    const estadoSelect = document.getElementById("estado");
+    const zonaSelect = document.getElementById("zona_operativa");
 
-  unidadSelect.addEventListener('change', () => {
-    cargarEstados(`${urlFiltros}&tabla=${tabla}`, unidadSelect.value, estadoSelect, zonaSelect);
-  });
+    if(unidadSelect) {
+        unidadSelect.addEventListener('change', () => {
+            // Asumiendo que cargarEstados está definido en 'js/filtros_dependientes.js'
+            if(typeof cargarEstados === 'function') {
+                cargarEstados(`${urlFiltros}?tabla=${tabla}`, unidadSelect.value, estadoSelect, zonaSelect);
+            }
+        });
+    }
 
-  estadoSelect.addEventListener('change', () => {
-    cargarZonas(`${urlFiltros}&tabla=${tabla}`, estadoSelect.value, unidadSelect.value, zonaSelect);
-  });
+    if(estadoSelect) {
+        estadoSelect.addEventListener('change', () => {
+            if(typeof cargarZonas === 'function') {
+                cargarZonas(`${urlFiltros}?tabla=${tabla}`, estadoSelect.value, unidadSelect.value, zonaSelect);
+            }
+        });
+    }
+});
 </script>
 {% endblock %}

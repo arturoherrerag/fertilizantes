@@ -1,101 +1,360 @@
 {% extends 'fertilizantes/base.html' %}
 {% load formatos %}
 
-{% block title %}Inventarios Negativos por CEDA y Día{% endblock %}
+{% block title %}Historial Inventarios Negativos{% endblock %}
 
 {% block content %}
-<h2 class="mb-4">CEDAs con Inventarios Negativos por Día</h2>
 
-<form method="get" class="row g-3 mb-4" id="filtros-form">
-  <div class="col-md-4">
-    <label for="unidad_operativa">Unidad Operativa:</label>
-    <select name="unidad_operativa" id="unidad_operativa" class="form-select">
-      <option value="">-- Todas --</option>
-      {% for u in unidades %}
-        <option value="{{ u }}" {% if u == unidad_seleccionada %}selected{% endif %}>{{ u }}</option>
-      {% endfor %}
-    </select>
-  </div>
+<style>
+    /* --- ESTILOS INSTITUCIONALES --- */
+    
+    /* Encabezado de tabla verde institucional */
+    .tabla-header-institucional th {
+        background-color: #264e46 !important;
+        color: #ffffff !important;
+        font-weight: 500;
+        border: none;
+        vertical-align: middle;
+    }
 
-  <div class="col-md-4">
-    <label for="estado">Estado:</label>
-    <select name="estado" id="estado" class="form-select">
-      <option value="">-- Todos --</option>
-      {% for e in estados %}
-        <option value="{{ e }}" {% if e == estado_seleccionada %}selected{% endif %}>{{ e }}</option>
-      {% endfor %}
-    </select>
-  </div>
+    /* Fila Maestra (La que se ve siempre) */
+    .fila-maestra {
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+    }
+    .fila-maestra:hover {
+        background-color: #f1f3f5 !important;
+    }
+    
+    /* Estado ACTIVO (Cuando está desplegada) */
+    .fila-maestra.fila-abierta {
+        background-color: #e2e6ea !important;
+        /* Borde VERDE a la izquierda de toda la fila cuando se abre */
+        border-left: 5px solid #264e46; 
+    }
 
-  <div class="col-md-4 d-flex align-items-end">
-    <button type="submit" class="btn btn-primary w-100">🔍 Aplicar Filtros</button>
-  </div>
-</form>
+    /* Icono de acordeón con animación */
+    .btn-accordion {
+        transition: transform 0.3s ease;
+        display: inline-block;
+    }
+    /* Rotar 180 grados cuando la fila tiene la clase 'fila-abierta' */
+    .fila-maestra.fila-abierta .btn-accordion {
+        transform: rotate(180deg);
+    }
 
-<div class="table-responsive mt-4">
-  <table class="table table-bordered table-striped table-hover table-sm align-middle text-center">
-    <thead class="table-light">
-      <tr class="align-middle">
-        <th>Fecha</th>
-        <th style="white-space: nowrap;">Unidad Operativa</th>
-        <th style="white-space: nowrap;">Estado</th>
-        <th style="white-space: nowrap;">Zona Operativa</th>
-        <th style="white-space: nowrap;">ID CEDA</th>
-        <th style="white-space: nowrap;">Nombre del CEDA</th>
-        <th>DAP Inv.</th>
-        <th>UREA Inv.</th>
-        <th>DAP Flete Ent.</th>
-        <th>UREA Flete Ent.</th>
-        <th>DAP Transf Ent.</th>
-        <th>UREA Transf Ent.</th>
-        <th>DAP Rem Ent.</th>
-        <th>UREA Rem Ent.</th>
-        <th>DAP Ent Sal.</th>
-        <th>UREA Ent Sal.</th>
-        <th>DAP Transf Sal.</th>
-        <th>UREA Transf Sal.</th>
-        <th>DAP Rem Sal.</th>
-        <th>UREA Rem Sal.</th>
-        <th>DAP Incid.</th>
-        <th>UREA Incid.</th>
-        <th>DAP Total Ent.</th>
-        <th>UREA Total Ent.</th>
-        <th>DAP Total Sal.</th>
-        <th>UREA Total Sal.</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for fila in datos %}
-      <tr>
-        <td>{{ fila.fecha|date:"d/m/Y" }}</td>
-        <td style="white-space: nowrap;">{{ fila.unidad_operativa }}</td>
-        <td style="white-space: nowrap;">{{ fila.estado }}</td>
-        <td style="white-space: nowrap;">{{ fila.zona_operativa }}</td>
-        <td style="white-space: nowrap;">{{ fila.id_ceda_agricultura }}</td>
-        <td style="white-space: nowrap;">{{ fila.nombre_cedas }}</td>
-        <td {% if fila.dap_inventario < 0 %}class="text-danger fw-bold"{% endif %}>{{ fila.dap_inventario|formato_mx:3 }}</td>
-        <td {% if fila.urea_inventario < 0 %}class="text-danger fw-bold"{% endif %}>{{ fila.urea_inventario|formato_mx:3 }}</td>
-        <td>{{ fila.dap_ton_flete_entrada|formato_mx:3 }}</td>
-        <td>{{ fila.urea_ton_flete_entrada|formato_mx:3 }}</td>
-        <td>{{ fila.dap_ton_transfer_entrada|formato_mx:3 }}</td>
-        <td>{{ fila.urea_ton_transfer_entrada|formato_mx:3 }}</td>
-        <td>{{ fila.dap_ton_remanente_entrada|formato_mx:3 }}</td>
-        <td>{{ fila.urea_ton_remanente_entrada|formato_mx:3 }}</td>
-        <td>{{ fila.dap_ton_entrega_salida|formato_mx:3 }}</td>
-        <td>{{ fila.urea_ton_entrega_salida|formato_mx:3 }}</td>
-        <td>{{ fila.dap_ton_transfer_salida|formato_mx:3 }}</td>
-        <td>{{ fila.urea_ton_transfer_salida|formato_mx:3 }}</td>
-        <td>{{ fila.dap_ton_remanente_salida|formato_mx:3 }}</td>
-        <td>{{ fila.urea_ton_remanente_salida|formato_mx:3 }}</td>
-        <td>{{ fila.dap_ton_incidentes_salida|formato_mx:3 }}</td>
-        <td>{{ fila.urea_ton_incidentes_salida|formato_mx:3 }}</td>
-        <td>{{ fila.dap_ton_total_entrada|formato_mx:3 }}</td>
-        <td>{{ fila.urea_ton_total_entrada|formato_mx:3 }}</td>
-        <td>{{ fila.dap_ton_total_salida|formato_mx:3 }}</td>
-        <td>{{ fila.urea_ton_total_salida|formato_mx:3 }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+    /* --- CORRECCIÓN AQUÍ --- */
+    /* Alerta visual para inventarios negativos */
+    .celda-negativa {
+        background-color: #fdf2f2; /* Fondo rojo muy pálido */
+        /* Forzamos el color ROJO para el texto */
+        color: #dc3545 !important; 
+        font-weight: 700;
+        /* SE ELIMINÓ LA LÍNEA: border-left: 3px solid #dc3545 !important; */
+    }
+
+    /* --- ESTILOS DEL DETALLE DESPLEGABLE --- */
+    
+    .fila-detalle {
+        background-color: #f8f9fa;
+        border-top: none;
+    }
+    
+    .card-detalle {
+        border: 1px solid #e9ecef;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+        height: 100%;
+    }
+    
+    .card-detalle-header {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-weight: bold;
+        padding: 10px 15px;
+        border-bottom: 1px solid #eee;
+    }
+    
+    /* Etiquetas dentro del detalle */
+    .dato-label {
+        font-size: 0.8rem;
+        color: #6c757d;
+        margin-bottom: 0;
+    }
+    .dato-valor {
+        font-weight: 600;
+        color: #212529;
+        font-size: 0.9rem;
+    }
+    
+    /* Totales dentro de las tarjetas */
+    .total-row {
+        background-color: #f8f9fa;
+        border-top: 1px solid #dee2e6;
+        margin-top: 0.5rem;
+        padding-top: 0.5rem;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+        border-radius: 4px;
+    }
+</style>
+
+<div class="container-fluid mt-4 mb-5">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 fw-bold text-danger">
+                <i class="bi bi-exclamation-octagon me-2"></i>Historial de Inventarios Negativos
+            </h1>
+            <p class="text-secondary mb-0">
+                Haz clic en cualquier fila para ver el desglose detallado de movimientos.
+            </p>
+        </div>
+        <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+            <i class="bi bi-printer me-1"></i> Imprimir
+        </button>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4 bg-light">
+        <div class="card-body p-4">
+            <h6 class="card-title fw-bold text-secondary mb-3">
+                <i class="bi bi-funnel me-1"></i> Filtros de Búsqueda
+            </h6>
+            <form method="get" class="row g-3 align-items-end" id="filtros-form">
+                <div class="col-md-3">
+                    <label class="form-label small text-muted fw-bold">Unidad Operativa</label>
+                    <select name="unidad_operativa" id="unidad_operativa" class="form-select border-0 shadow-sm">
+                        <option value="">-- Todas --</option>
+                        {% for u in unidades %}
+                            <option value="{{ u }}" {% if u == unidad_seleccionada %}selected{% endif %}>{{ u }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small text-muted fw-bold">Estado</label>
+                    <select name="estado" id="estado" class="form-select border-0 shadow-sm">
+                        <option value="">-- Todos --</option>
+                        {% for e in estados %}
+                            <option value="{{ e }}" {% if e == estado_seleccionado %}selected{% endif %}>{{ e }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn text-white w-100 shadow-sm" style="background-color: #264e46;">
+                        <i class="bi bi-search"></i> Filtrar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table mb-0 align-middle" style="border-collapse: separate; border-spacing: 0;">
+                    <thead class="tabla-header-institucional">
+                        <tr>
+                            <th class="ps-4 py-3">Fecha</th>
+                            <th>Ubicación</th>
+                            <th>CEDA</th>
+                            <th class="text-end">DAP Inv. Final</th>
+                            <th class="text-end">UREA Inv. Final</th>
+                            <th class="text-center" style="width: 80px;">Detalle</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for fila in datos %}
+                        
+                        <tr class="fila-maestra" 
+                            id="fila-{{ forloop.counter }}"
+                            onclick="toggleAcordeon('{{ forloop.counter }}')">
+                            
+                            <td class="ps-4 text-muted fw-medium">
+                                <i class="bi bi-calendar-event me-2"></i>{{ fila.fecha|date:"d M Y" }}
+                            </td>
+                            <td>
+                                <div class="fw-bold text-dark">{{ fila.unidad_operativa }}</div>
+                                <small class="text-muted">{{ fila.estado }}</small>
+                            </td>
+                            <td>
+                                <div class="fw-bold text-dark">{{ fila.nombre_cedas }}</div>
+                                <small class="text-muted font-monospace">{{ fila.id_ceda_agricultura }}</small>
+                            </td>
+                            
+                            <td class="text-end {% if fila.dap_inventario < 0 %}celda-negativa{% endif %}">
+                                {{ fila.dap_inventario|formato_mx:3 }}
+                            </td>
+                            <td class="text-end {% if fila.urea_inventario < 0 %}celda-negativa{% endif %}">
+                                {{ fila.urea_inventario|formato_mx:3 }}
+                            </td>
+                            
+                            <td class="text-center text-muted">
+                                <i class="bi bi-chevron-down btn-accordion fs-5"></i>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="6" class="p-0 border-0">
+                                <div id="collapse-{{ forloop.counter }}" class="collapse fila-detalle">
+                                    <div class="p-4">
+                                        
+                                        <div class="row g-4">
+                                            
+                                            <div class="col-md-6">
+                                                <div class="card card-detalle bg-white">
+                                                    <div class="card-detalle-header text-success bg-success bg-opacity-10">
+                                                        <i class="bi bi-box-arrow-in-down me-2"></i>Entradas del Día
+                                                    </div>
+                                                    <div class="card-body">
+                                                        <div class="row">
+                                                            <div class="col-6 border-end">
+                                                                <h6 class="text-muted text-center border-bottom pb-2 mb-3 small fw-bold">DAP</h6>
+                                                                
+                                                                <div class="d-flex justify-content-between mb-1">
+                                                                    <span class="dato-label">Fletes:</span>
+                                                                    <span class="dato-valor">{{ fila.dap_ton_flete_entrada|formato_mx:3 }}</span>
+                                                                </div>
+                                                                <div class="d-flex justify-content-between mb-1">
+                                                                    <span class="dato-label">Transfer:</span>
+                                                                    <span class="dato-valor">{{ fila.dap_ton_transfer_entrada|formato_mx:3 }}</span>
+                                                                </div>
+                                                                <div class="d-flex justify-content-between mb-1">
+                                                                    <span class="dato-label">Remanente:</span>
+                                                                    <span class="dato-valor">{{ fila.dap_ton_remanente_entrada|formato_mx:3 }}</span>
+                                                                </div>
+                                                                
+                                                                <div class="total-row d-flex justify-content-between">
+                                                                    <span class="fw-bold text-dark small">Total:</span>
+                                                                    <span class="fw-bold text-success">{{ fila.dap_ton_total_entrada|formato_mx:3 }}</span>
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            <div class="col-6">
+                                                                <h6 class="text-muted text-center border-bottom pb-2 mb-3 small fw-bold">UREA</h6>
+                                                                
+                                                                <div class="d-flex justify-content-between mb-1">
+                                                                    <span class="dato-label">Fletes:</span>
+                                                                    <span class="dato-valor">{{ fila.urea_ton_flete_entrada|formato_mx:3 }}</span>
+                                                                </div>
+                                                                <div class="d-flex justify-content-between mb-1">
+                                                                    <span class="dato-label">Transfer:</span>
+                                                                    <span class="dato-valor">{{ fila.urea_ton_transfer_entrada|formato_mx:3 }}</span>
+                                                                </div>
+                                                                <div class="d-flex justify-content-between mb-1">
+                                                                    <span class="dato-label">Remanente:</span>
+                                                                    <span class="dato-valor">{{ fila.urea_ton_remanente_entrada|formato_mx:3 }}</span>
+                                                                </div>
+
+                                                                <div class="total-row d-flex justify-content-between">
+                                                                    <span class="fw-bold text-dark small">Total:</span>
+                                                                    <span class="fw-bold text-success">{{ fila.urea_ton_total_entrada|formato_mx:3 }}</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-md-6">
+                                                <div class="card card-detalle bg-white">
+                                                    <div class="card-detalle-header text-primary bg-primary bg-opacity-10">
+                                                        <i class="bi bi-box-arrow-up me-2"></i>Salidas del Día
+                                                    </div>
+                                                    <div class="card-body">
+                                                        <div class="row">
+                                                            <div class="col-6 border-end">
+                                                                <h6 class="text-muted text-center border-bottom pb-2 mb-3 small fw-bold">DAP</h6>
+                                                                
+                                                                <div class="d-flex justify-content-between mb-1">
+                                                                    <span class="dato-label">Entregas:</span>
+                                                                    <span class="dato-valor">{{ fila.dap_ton_entrega_salida|formato_mx:3 }}</span>
+                                                                </div>
+                                                                <div class="d-flex justify-content-between mb-1">
+                                                                    <span class="dato-label">Transfer:</span>
+                                                                    <span class="dato-valor">{{ fila.dap_ton_transfer_salida|formato_mx:3 }}</span>
+                                                                </div>
+                                                                <div class="d-flex justify-content-between mb-1">
+                                                                    <span class="dato-label">Incidentes:</span>
+                                                                    <span class="dato-valor">{{ fila.dap_ton_incidentes_salida|formato_mx:3 }}</span>
+                                                                </div>
+
+                                                                <div class="total-row d-flex justify-content-between">
+                                                                    <span class="fw-bold text-dark small">Total:</span>
+                                                                    <span class="fw-bold text-primary">{{ fila.dap_ton_total_salida|formato_mx:3 }}</span>
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            <div class="col-6">
+                                                                <h6 class="text-muted text-center border-bottom pb-2 mb-3 small fw-bold">UREA</h6>
+                                                                
+                                                                <div class="d-flex justify-content-between mb-1">
+                                                                    <span class="dato-label">Entregas:</span>
+                                                                    <span class="dato-valor">{{ fila.urea_ton_entrega_salida|formato_mx:3 }}</span>
+                                                                </div>
+                                                                <div class="d-flex justify-content-between mb-1">
+                                                                    <span class="dato-label">Transfer:</span>
+                                                                    <span class="dato-valor">{{ fila.urea_ton_transfer_salida|formato_mx:3 }}</span>
+                                                                </div>
+                                                                <div class="d-flex justify-content-between mb-1">
+                                                                    <span class="dato-label">Incidentes:</span>
+                                                                    <span class="dato-valor">{{ fila.urea_ton_incidentes_salida|formato_mx:3 }}</span>
+                                                                </div>
+
+                                                                <div class="total-row d-flex justify-content-between">
+                                                                    <span class="fw-bold text-dark small">Total:</span>
+                                                                    <span class="fw-bold text-primary">{{ fila.urea_ton_total_salida|formato_mx:3 }}</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                        </div> </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class="bi bi-check-circle fs-1 d-block mb-2 text-success"></i>
+                                ¡Todo en orden! No se encontraron registros de inventario negativo.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    /**
+     * Función para alternar el acordeón manualmente.
+     * Garantiza que el icono rote y que el detalle se oculte al segundo clic.
+     */
+    function toggleAcordeon(id) {
+        const row = document.getElementById('fila-' + id);
+        const contentDiv = document.getElementById('collapse-' + id);
+        
+        // Usar getOrCreateInstance para evitar conflictos
+        const bsCollapse = bootstrap.Collapse.getOrCreateInstance(contentDiv, {toggle: false});
+        
+        if (contentDiv.classList.contains('show')) {
+            bsCollapse.hide();
+            row.classList.remove('fila-abierta');
+        } else {
+            // Opcional: cerrar otros si se desea comportamiento de acordeón único
+            // document.querySelectorAll('.collapse.show').forEach(el => bootstrap.Collapse.getInstance(el).hide());
+            // document.querySelectorAll('.fila-maestra.fila-abierta').forEach(el => el.classList.remove('fila-abierta'));
+            
+            bsCollapse.show();
+            row.classList.add('fila-abierta');
+        }
+    }
+</script>
 {% endblock %}

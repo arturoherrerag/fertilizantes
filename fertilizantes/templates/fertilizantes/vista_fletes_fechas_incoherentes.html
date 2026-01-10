@@ -4,43 +4,208 @@
 {% block title %}Fletes con Fechas Incoherentes{% endblock %}
 
 {% block content %}
-<h2>🕒 Fletes con Fechas Incoherentes</h2>
-<p>Casos donde la <strong>fecha de salida</strong> es posterior a la <strong>fecha de llegada</strong> o la <strong>fecha de entrega</strong>.</p>
 
-<div class="table-responsive mt-4">
-  <table class="table table-bordered table-hover">
-    <thead class="table-light">
-      <tr>
-        <th class="text-nowrap">Unidad Operativa</th>
-        <th class="text-nowrap">Estado</th>
-        <th class="text-nowrap">Zona</th>
-        <th class="text-nowrap">ID CEDA</th>
-        <th class="text-nowrap">Nombre del CEDA</th>
-        <th class="text-nowrap">Folio del Flete</th>
-        <th class="text-nowrap">Producto</th>
-        <th class="text-nowrap">Ton. Recibidas</th>
-        <th class="text-nowrap">Fecha de Salida</th>
-        <th class="text-nowrap">Fecha de Llegada</th>
-        <th class="text-nowrap">Fecha de Entrega</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for fila in datos %}
-      <tr>
-        <td class="text-nowrap">{{ fila.coordinacion_estatal }}</td>
-        <td class="text-nowrap">{{ fila.estado }}</td>
-        <td class="text-nowrap">{{ fila.zona_operativa }}</td>
-        <td class="text-nowrap">{{ fila.id_ceda_agricultura }}</td>
-        <td class="text-nowrap">{{ fila.nombre_cedas }}</td>
-        <td class="text-nowrap">{{ fila.folio_del_flete }}</td>
-        <td class="text-nowrap">{{ fila.abreviacion_producto }}</td>
-        <td class="text-nowrap">{{ fila.toneladas_en_el_destino|formato_mx:2 }}</td>
-        <td class="text-nowrap text-danger">{{ fila.fecha_de_salida|date:"d/m/Y" }}</td>
-        <td class="text-nowrap">{{ fila.fecha_de_llegada|date:"d/m/Y	" }}</td>
-        <td class="text-nowrap">{{ fila.fecha_de_entrega|date:"d/m/Y H:i" }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+<style>
+    /* --- Estilos Institucionales --- */
+    .tabla-header-institucional th {
+        background-color: #264e46 !important;
+        color: #ffffff !important;
+        font-weight: 500;
+        border: 1px solid rgba(255,255,255,0.1);
+        vertical-align: middle;
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    /* Fuente para Folios */
+    .font-monospace-custom {
+        font-family: 'Consolas', 'Monaco', monospace;
+        font-weight: 600;
+        color: #264e46;
+    }
+
+    /* Resaltado de Fecha Errónea */
+    .fecha-error {
+        color: #dc3545 !important;
+        font-weight: 700;
+        background-color: #fdf2f2;
+        padding: 2px 5px;
+        border-radius: 4px;
+        border: 1px solid #f5c6cb;
+    }
+
+    /* --- TABLA FANTASMA (OCULTA) --- */
+    #contenedor-tabla-oculta {
+        height: 0px;
+        width: 0px;
+        overflow: hidden;
+        position: absolute;
+        left: -9999px;
+    }
+</style>
+
+<div class="container mt-4 mb-5">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 fw-bold text-warning text-opacity-75" style="color: #d39e00 !important;">
+                <i class="bi bi-calendar-range me-2"></i>Fletes con Fechas Incoherentes
+            </h1>
+            <p class="text-secondary mb-0">
+                Fletes donde la <strong>Fecha de Salida</strong> es posterior a la llegada o entrega (cronología ilógica).
+            </p>
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-success btn-sm text-white" onclick="descargarCSV()">
+                <i class="bi bi-file-earmark-excel me-1"></i> Descargar CSV
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+                <i class="bi bi-printer me-1"></i> Imprimir
+            </button>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive rounded-top">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="tabla-header-institucional">
+                        <tr>
+                            <th class="ps-3 text-start">Ubicación / CEDA</th>
+                            <th class="text-start">Folio / Producto</th>
+                            <th>Ton. Recibidas</th>
+                            <th class="bg-danger text-white border-end" style="background-color: #a71d2a !important;">Fecha Salida (Error)</th>
+                            <th>Fecha Llegada</th>
+                            <th>Fecha Entrega</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for fila in datos %}
+                        <tr>
+                            <td class="ps-3">
+                                <span class="d-block fw-bold text-dark">{{ fila.nombre_cedas }}</span>
+                                <small class="text-muted d-block">{{ fila.unidad_operativa }} | {{ fila.estado }}</small>
+                                <small class="text-muted font-monospace" style="font-size: 0.75rem;">ID: {{ fila.id_ceda_agricultura }}</small>
+                            </td>
+
+                            <td>
+                                <span class="d-block font-monospace-custom">{{ fila.folio_del_flete }}</span>
+                                <span class="badge rounded-pill bg-light text-secondary border mt-1 fw-normal">
+                                    {{ fila.abreviacion_producto }}
+                                </span>
+                            </td>
+
+                            <td class="text-center text-secondary fw-medium">
+                                {{ fila.toneladas_en_el_destino|formato_mx:2 }}
+                            </td>
+
+                            <td class="text-center border-end bg-light">
+                                <span class="fecha-error">
+                                    <i class="bi bi-x-circle me-1"></i>{{ fila.fecha_de_salida|date:"d/m/Y" }}
+                                </span>
+                            </td>
+
+                            <td class="text-center text-muted">
+                                {{ fila.fecha_de_llegada|date:"d/m/Y"|default:"--" }}
+                            </td>
+
+                            <td class="text-center text-muted">
+                                {{ fila.fecha_de_entrega|date:"d/m/Y H:i"|default:"--" }}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class="bi bi-calendar-check fs-1 d-block mb-2 text-success"></i>
+                                ¡Todo correcto! No se encontraron inconsistencias de fechas.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-3 text-end">
+        <small class="text-muted fst-italic">
+            * Use "Descargar CSV" para obtener la tabla completa con columnas separadas.
+        </small>
+    </div>
+
 </div>
+
+<div id="contenedor-tabla-oculta">
+    <table id="tabla-exportar">
+        <thead>
+            <tr>
+                <th>Unidad Operativa</th>
+                <th>Estado</th>
+                <th>Zona</th>
+                <th>ID CEDA</th>
+                <th>Nombre CEDA</th>
+                <th>Folio Flete</th>
+                <th>Producto</th>
+                <th>Ton. Recibidas</th>
+                <th>Fecha Salida</th>
+                <th>Fecha Llegada</th>
+                <th>Fecha Entrega</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for fila in datos %}
+            <tr>
+                <td>{{ fila.coordinacion_estatal }}</td>
+                <td>{{ fila.estado }}</td>
+                <td>{{ fila.zona_operativa }}</td>
+                <td>{{ fila.id_ceda_agricultura }}</td>
+                <td>{{ fila.nombre_cedas }}</td>
+                <td>{{ fila.folio_del_flete }}</td>
+                <td>{{ fila.abreviacion_producto }}</td>
+                <td>{{ fila.toneladas_en_el_destino|formato_mx:2 }}</td>
+                <td>{{ fila.fecha_de_salida|date:"d/m/Y" }}</td>
+                <td>{{ fila.fecha_de_llegada|date:"d/m/Y" }}</td>
+                <td>{{ fila.fecha_de_entrega|date:"d/m/Y H:i" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function descargarCSV() {
+        const tabla = document.getElementById("tabla-exportar");
+        let filas = Array.from(tabla.querySelectorAll("tr"));
+        
+        let csvContent = filas.map(fila => {
+            let celdas = Array.from(fila.querySelectorAll("th, td"));
+            return celdas.map(celda => {
+                // Usamos textContent para leer el contenido oculto
+                let texto = celda.textContent.replace(/(\r\n|\n|\r)/gm, " ").trim();
+                
+                // Manejo de comas para CSV
+                if (texto.includes(",")) {
+                    return `"${texto}"`;
+                }
+                return texto;
+            }).join(","); 
+        }).join("\n"); 
+
+        const bom = "\uFEFF"; 
+        const blob = new Blob([bom + csvContent], { type: "text/csv;charset=utf-8;" });
+        
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", "Fletes_Fechas_Incoherentes.csv");
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+</script>
 {% endblock %}

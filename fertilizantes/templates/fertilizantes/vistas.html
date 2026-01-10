@@ -3,253 +3,338 @@
 {% block title %}Vistas - Programa de Fertilizantes{% endblock %}
 
 {% block content %}
-<div class="container mt-5">
+<div class="container mt-5 mb-5">
 
-    <div class="text-center mb-5">
-        <h1>Vistas de Resúmenes</h1>
-        <p class="lead">Consulta rápida de los principales indicadores operativos.</p>
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1 class="h3 fw-bold" style="color: #264e46;">
+                <i class="bi bi-table me-2"></i>Vistas de Resúmenes
+            </h1>
+            <p class="text-secondary">
+                Consulta rápida de los principales indicadores operativos e inventarios.
+            </p>
+        </div>
     </div>
 
     <div class="row row-cols-1 row-cols-md-3 g-4">
 
         <div class="col">
-            <div class="card h-100 text-center shadow">
-                <div class="card-body">
-                    <h5 class="card-title">🚚 Fletes en Tránsito</h5>
-                    <p class="card-text">Resumen de fletes actualmente en tránsito por estado.</p>
-                    <a href="{% url 'vista_fletes_transito' %}" class="btn btn-success">Ver Resumen</a>
+            <div class="card shadow-sm h-100 border-0">
+                <div class="card-body d-flex flex-column p-4 bg-white rounded border">
+                    <h5 class="card-title fw-bold text-dark mb-3">
+                        <i class="bi bi-truck me-2" style="color: #264e46;"></i> Fletes en Tránsito
+                    </h5>
+                    <p class="card-text text-secondary flex-grow-1">
+                        Resumen de fletes actualmente en tránsito por estado.
+                    </p>
+                    <a href="{% url 'vista_fletes_transito' %}" class="btn w-100 py-2 fw-medium"
+                       style="background-color:#264e46; color:white;">
+                        Ver Resumen
+                    </a>
                 </div>
             </div>
         </div>
 
-
-<div class="col">
-  <div class="card h-100 text-center shadow">
-    <div class="card-body">
-      <h5 class="card-title">🚛 Fletes en Tránsito por CEDA</h5>
-      <p class="card-text">Detalle de fletes aún en tránsito con días acumulados.</p>
-      <a href="{% url 'vista_fletes_transito_por_CEDA' %}" class="btn btn-success">Ver Detalle</a>
-    </div>
-  </div>
-</div>
-
-
-<div class="col">
-  <div class="card h-100 text-center shadow">
-    <div class="card-body">
-      <h5 class="card-title">🚛 Fletes Autorizados en Tránsito</h5>
-      <p class="card-text">Detalle de fletes con estatus autorizado y en tránsito.</p>
-      <a href="{% url 'vista_fletes_autorizados_en_transito' %}" class="btn btn-success">Ver Fletes</a>
-    </div>
-  </div>
-</div>
-
-
-<div class="col">
-  <div class="card h-100 text-center shadow">
-    <div class="card-body">
-      <h5 class="card-title">📊 Historial Inventario Diario</h5>
-      <p class="card-text">Ver entradas, salidas e inventario acumulado por CEDA y día.</p>
-      <a href="{% url 'vista_inventario_diario_ceda' %}" class="btn btn-success">Ver Historial</a>
-    </div>
-  </div>
-</div>
-
-
-
-<div class="col">
-    <div class="card h-100 text-center shadow">
-        <div class="card-body">
-            <h5 class="card-title">📉 Inventarios Negativos Actuales</h5>
-            <p class="card-text">CEDAs con inventarios negativos al día de hoy.</p>
-            <a href="{% url 'vista_inventarios_negativos_actuales' %}" class="btn btn-danger">Ver Resumen</a>
+        <div class="col">
+            <div class="card shadow-sm h-100 border-0">
+                <div class="card-body d-flex flex-column p-4 bg-white rounded border">
+                    <h5 class="card-title fw-bold text-dark mb-3">
+                        <i class="bi bi-geo-alt me-2" style="color: #264e46;"></i> Fletes en Tránsito (CEDA)
+                    </h5>
+                    <p class="card-text text-secondary flex-grow-1">
+                        Detalle de fletes aún en tránsito con días acumulados por centro.
+                    </p>
+                    <a href="{% url 'vista_fletes_transito_por_CEDA' %}" class="btn w-100 py-2 fw-medium"
+                       style="background-color:#264e46; color:white;">
+                        Ver Detalle
+                    </a>
+                </div>
+            </div>
         </div>
+
+        <div class="col">
+            <div class="card shadow-sm h-100 border-0">
+                <div class="card-body d-flex flex-column p-4 bg-white rounded border">
+                    <h5 class="card-title fw-bold text-dark mb-3">
+                        <i class="bi bi-check-circle me-2" style="color: #264e46;"></i> Autorizados en Tránsito
+                    </h5>
+                    <p class="card-text text-secondary flex-grow-1">
+                        Detalle de fletes con estatus autorizado y actualmente en ruta.
+                    </p>
+                    <a href="{% url 'vista_fletes_autorizados_en_transito' %}" class="btn w-100 py-2 fw-medium"
+                       style="background-color:#264e46; color:white;">
+                        Ver Fletes
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col">
+            <div class="card shadow-sm h-100 border-0">
+                <div class="card-body d-flex flex-column p-4 bg-white rounded border">
+                    <h5 class="card-title fw-bold text-dark mb-3">
+                        <i class="bi bi-calendar-week me-2" style="color: #264e46;"></i> Historial Inventario
+                    </h5>
+                    <p class="card-text text-secondary flex-grow-1">
+                        Ver entradas, salidas e inventario acumulado por CEDA y día.
+                    </p>
+                    <a href="{% url 'vista_inventario_diario_ceda' %}" class="btn w-100 py-2 fw-medium"
+                       style="background-color:#264e46; color:white;">
+                        Ver Historial
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col">
+            <div class="card shadow-sm h-100 border-0">
+                <div class="card-body d-flex flex-column p-4 bg-white rounded border position-relative">
+                    <h5 class="card-title fw-bold text-danger mb-3">
+                        <i class="bi bi-graph-down-arrow me-2"></i> Inv. Negativos Actuales
+                    </h5>
+                    <p class="card-text text-secondary flex-grow-1">
+                        CEDAs con inventarios negativos al día de hoy.
+                    </p>
+                    <a href="{% url 'vista_inventarios_negativos_actuales' %}" class="btn w-100 py-2 fw-medium btn-danger">
+                        Ver Resumen
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col">
+            <div class="card shadow-sm h-100 border-0">
+                <div class="card-body d-flex flex-column p-4 bg-white rounded border">
+                    <h5 class="card-title fw-bold text-danger mb-3">
+                        <i class="bi bi-calendar-x me-2"></i> Inv. Negativos Histórico
+                    </h5>
+                    <p class="card-text text-secondary flex-grow-1">
+                        Historial de inventarios negativos desglosado por CEDA y fecha.
+                    </p>
+                    <a href="{% url 'vista_inventarios_negativos_x_dia' %}" class="btn w-100 py-2 fw-medium btn-danger">
+                        Ver Detalle
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col">
+            <div class="card shadow-sm h-100 border-0">
+                <div class="card-body d-flex flex-column p-4 bg-white rounded border">
+                    <h5 class="card-title fw-bold text-dark mb-3">
+                        <i class="bi bi-box-seam me-2" style="color: #a57f2c;"></i> Resumen Remanentes
+                    </h5>
+                    <p class="card-text text-secondary flex-grow-1">
+                        Totales de entrada, salida e inventario por Unidad y Estado.
+                    </p>
+                    <a href="{% url 'vista_resumen_remanente_estado' %}" class="btn w-100 py-2 fw-medium"
+                       style="background-color:#264e46; color:white;">
+                        Ver Resumen
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col">
+            <div class="card shadow-sm h-100 border-0">
+                <div class="card-body d-flex flex-column p-4 bg-white rounded border">
+                    <h5 class="card-title fw-bold text-dark mb-3">
+                        <i class="bi bi-shop me-2" style="color: #a57f2c;"></i> CEDAs con Remanentes
+                    </h5>
+                    <p class="card-text text-secondary flex-grow-1">
+                        Listado de CEDAs con inventario remanente mayor a 0.
+                    </p>
+                    <a href="{% url 'vista_cedas_con_remanentes' %}" class="btn w-100 py-2 fw-medium"
+                       style="background-color:#264e46; color:white;">
+                        Ver CEDAs
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col">
+            <div class="card shadow-sm h-100 border-0">
+                <div class="card-body d-flex flex-column p-4 bg-white rounded border">
+                    <h5 class="card-title fw-bold text-danger mb-3">
+                        <i class="bi bi-exclamation-triangle me-2"></i> Remanente Negativo
+                    </h5>
+                    <p class="card-text text-secondary flex-grow-1">
+                        CEDAs con inventario negativo de remanente. <span class="fw-bold">Atención urgente.</span>
+                    </p>
+                    <a href="{% url 'vista_cedas_con_remanentes_negativos' %}" class="btn w-100 py-2 fw-medium btn-danger">
+                        Ver Negativos
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col">
+            <div class="card shadow-sm h-100 border-0">
+                <div class="card-body d-flex flex-column p-4 bg-white rounded border">
+                    <h5 class="card-title fw-bold text-dark mb-3">
+                        <i class="bi bi-speedometer2 me-2" style="color: #264e46;"></i> Fletes por Toneladas
+                    </h5>
+                    <p class="card-text text-secondary flex-grow-1">
+                        Distribución y conteo de fletes según su tonelaje inicial.
+                    </p>
+                    <a href="{% url 'vista_fletes_ton_conteo_detalle' %}" class="btn w-100 py-2 fw-medium"
+                       style="background-color:#264e46; color:white;">
+                        Ver Detalle
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col">
+            <div class="card shadow-sm h-100 border-0">
+                <div class="card-body d-flex flex-column p-4 bg-white rounded border">
+                    <h5 class="card-title fw-bold text-danger mb-3">
+                        <i class="bi bi-question-diamond me-2"></i> Fletes Atípicos
+                    </h5>
+                    <p class="card-text text-secondary flex-grow-1">
+                        Casos donde las toneladas recibidas difieren significativamente de lo enviado.
+                    </p>
+                    <a href="{% url 'vista_fletes_atipicos' %}" class="btn w-100 py-2 fw-medium btn-danger">
+                        Ver Detalle
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col">
+            <div class="card shadow-sm h-100 border-0">
+                <div class="card-body d-flex flex-column p-4 bg-white rounded border">
+                    <h5 class="card-title fw-bold text-warning text-opacity-75 mb-3" style="color:#d39e00 !important;">
+                        <i class="bi bi-calendar-range me-2"></i> Fechas Incoherentes
+                    </h5>
+                    <p class="card-text text-secondary flex-grow-1">
+                        Casos donde la salida ocurre después de la llegada o entrega.
+                    </p>
+                    <a href="{% url 'vista_fletes_fechas_incoherentes' %}" class="btn w-100 py-2 fw-medium btn-warning text-white">
+                        Ver Detalle
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col">
+            <div class="card shadow-sm h-100 border-0">
+                <div class="card-body d-flex flex-column p-4 bg-white rounded border">
+                    <h5 class="card-title fw-bold text-dark mb-3">
+                        <i class="bi bi-cart3 me-2" style="color: #264e46;"></i> Pedidos por Fecha
+                    </h5>
+                    <p class="card-text text-secondary flex-grow-1">
+                        Consulta el desglose diario de pedidos por CEDA (DAP y UREA).
+                    </p>
+                    <a href="{% url 'pedidos_detalle_por_fecha' %}" class="btn w-100 py-2 fw-medium"
+                       style="background-color:#264e46; color:white;">
+                        Ver Detalles
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col">
+            <div class="card shadow-sm h-100 border-0">
+                <div class="card-body d-flex flex-column p-4 bg-white rounded border">
+                    <h5 class="card-title fw-bold text-dark mb-3">
+                        <i class="bi bi-people-fill me-2" style="color: #264e46;"></i> Derechohabientes
+                    </h5>
+                    <p class="card-text text-secondary flex-grow-1">
+                        Consulta de acuses, CURP y ubicación por CEDA. Exportable a CSV.
+                    </p>
+                    <a href="{% url 'vista_derechohabientes' %}" class="btn w-100 py-2 fw-medium"
+                       style="background-color:#264e46; color:white;">
+                        Abrir Consulta
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col">
+            <div class="card shadow-sm h-100 border-0">
+                <div class="card-body d-flex flex-column p-4 bg-white rounded border">
+                    <h5 class="card-title fw-bold text-dark mb-3">
+                        <i class="bi bi-search me-2" style="color: #264e46;"></i> Consulta Fletes
+                    </h5>
+                    <p class="card-text text-secondary flex-grow-1">
+                        Búsqueda avanzada y exportación por unidad, estado, folio y estatus.
+                    </p>
+                    <a href="{% url 'vista_fletes' %}" class="btn w-100 py-2 fw-medium"
+                       style="background-color:#264e46; color:white;">
+                        Abrir Consulta
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col">
+            <div class="card shadow-sm h-100 border-0">
+                <div class="card-body d-flex flex-column p-4 bg-white rounded border">
+                    <h5 class="card-title fw-bold text-dark mb-3">
+                        <i class="bi bi-arrow-left-right me-2" style="color: #264e46;"></i> Campo vs SIGAP
+                    </h5>
+                    <p class="card-text text-secondary flex-grow-1">
+                        Comparativo de inventario diario reportado en Campo vs Sistema.
+                    </p>
+                    <a href="{% url 'vista_inventario_ceda_diario_campo' %}" class="btn w-100 py-2 fw-medium"
+                       style="background-color:#264e46; color:white;">
+                        Ver Inventario
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col">
+            <div class="card shadow-sm h-100 border-0">
+                <div class="card-body d-flex flex-column p-4 bg-white rounded border">
+                    <h5 class="card-title fw-bold text-dark mb-3">
+                        <i class="bi bi-bar-chart-line me-2" style="color: #264e46;"></i> Estadísticas Campo
+                    </h5>
+                    <p class="card-text text-secondary flex-grow-1">
+                        Último inventario reportado, días de operación y estatus RC/COZ.
+                    </p>
+                    <a href="{% url 'vista_estadisticas_inventarios_campo' %}" class="btn w-100 py-2 fw-medium"
+                       style="background-color:#264e46; color:white;">
+                        Ver Estadísticas
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col">
+            <div class="card shadow-sm h-100 border-0">
+                <div class="card-body d-flex flex-column p-4 bg-white rounded border">
+                    <h5 class="card-title fw-bold text-dark mb-3">
+                        <i class="bi bi-chat-left-text me-2" style="color: #264e46;"></i> Comentarios CEDA
+                    </h5>
+                    <p class="card-text text-secondary flex-grow-1">
+                        Análisis operativo por CEDA y registro de observaciones.
+                    </p>
+                    <a href="{% url 'comentarios_por_ceda' %}" class="btn w-100 py-2 fw-medium"
+                       style="background-color:#264e46; color:white;">
+                        Ver Comentarios
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col">
+            <div class="card shadow-sm h-100 border-0">
+                <div class="card-body d-flex flex-column p-4 bg-white rounded border">
+                    <h5 class="card-title fw-bold text-dark mb-3">
+                        <i class="bi bi-camera-reels me-2" style="color: #161a1d;"></i> OCR Rápido
+                    </h5>
+                    <p class="card-text text-secondary flex-grow-1">
+                        Pega capturas, imágenes o PDF y extrae texto plano instantáneo.
+                    </p>
+                    <a href="{% url 'ocr_page' %}" class="btn w-100 py-2 fw-medium btn-dark">
+                        Abrir OCR
+                    </a>
+                </div>
+            </div>
+        </div>
+
     </div>
-</div>
-
-
-<div class="col">
-  <div class="card h-100 text-center shadow">
-    <div class="card-body">
-      <h5 class="card-title">📉 Inventarios Negativos por Día</h5>
-      <p class="card-text">Historial de inventarios negativos por CEDA y fecha.</p>
-      <a href="{% url 'vista_inventarios_negativos_x_dia' %}" class="btn btn-danger">Ver Detalle</a>
-    </div>
-  </div>
-</div>
-
-
-
-<!-- Resumen Remanentes por Estado -->
-<div class="col">
-  <div class="card h-100 text-center shadow">
-    <div class="card-body">
-      <h5 class="card-title">📦 Resumen Remanentes</h5>
-      <p class="card-text">Totales de entrada, salida e inventario por Unidad y Estado.</p>
-      <a href="{% url 'vista_resumen_remanente_estado' %}" class="btn btn-success">Ver Resumen</a>
-    </div>
-  </div>
-</div>
-
-<!-- CEDAs con Remanentes -->
-<div class="col">
-  <div class="card h-100 text-center shadow">
-    <div class="card-body">
-      <h5 class="card-title">📦 CEDAs con Remanentes</h5>
-      <p class="card-text">Listado de CEDAs con inventario remanente mayor a 0.</p>
-      <a href="{% url 'vista_cedas_con_remanentes' %}" class="btn btn-success">Ver CEDAs</a>
-    </div>
-  </div>
-</div>
-
-
-<!-- CEDAs con Remanentes Negativos -->
-<div class="col">
-  <div class="card h-100 text-center shadow">
-    <div class="card-body">
-      <h5 class="card-title">📉 Remanente Negativo</h5>
-      <p class="card-text">CEDAs con inventario negativo de remanente. Atención urgente.</p>
-      <a href="{% url 'vista_cedas_con_remanentes_negativos' %}" class="btn btn-danger">Ver Negativos</a>
-    </div>
-  </div>
-</div>
-
-
-<div class="col">
-  <div class="card h-100 text-center shadow">
-    <div class="card-body">
-      <h5 class="card-title">🚛 Fletes por Toneladas</h5>
-      <p class="card-text">Distribución de fletes según toneladas iniciales.</p>
-      <a href="{% url 'vista_fletes_ton_conteo_detalle' %}" class="btn btn-success">Ver Detalle</a>
-    </div>
-  </div>
-</div>
-
-
-<div class="col">
-  <div class="card h-100 text-center shadow">
-    <div class="card-body">
-      <h5 class="card-title">⚠️ Fletes Atípicos</h5>
-      <p class="card-text">Casos donde las toneladas recibidas difieren significativamente de lo enviado.</p>
-      <a href="{% url 'vista_fletes_atipicos' %}" class="btn btn-danger">Ver Detalle</a>
-    </div>
-  </div>
-</div>
-
-
-<div class="col">
-  <div class="card h-100 text-center shadow">
-    <div class="card-body">
-      <h5 class="card-title">🕒 Fletes con Fechas Incoherentes</h5>
-      <p class="card-text">Casos donde la salida ocurre después de la llegada o entrega.</p>
-      <a href="{% url 'vista_fletes_fechas_incoherentes' %}" class="btn btn-warning">Ver Detalle</a>
-    </div>
-  </div>
-</div>
-
-
-<div class="col-md-4 mb-4">
-  <div class="card shadow-sm h-100">
-    <div class="card-body d-flex flex-column justify-content-between">
-      <div>
-        <h5 class="card-title">📦 Pedidos por Fecha</h5>
-        <p class="card-text">Consulta el desglose diario de pedidos por CEDA con detalle de DAP y UREA.</p>
-      </div>
-      <a href="{% url 'pedidos_detalle_por_fecha' %}" class="btn btn-outline-primary mt-3">Ver Detalles</a>
-    </div>
-  </div>
-</div>
-
-
-<!-- Derechohabientes -->
-<div class="col">
-  <div class="card h-100 text-center shadow">
-    <div class="card-body">
-      <h5 class="card-title">👥 Derechohabientes</h5>
-      <p class="card-text">
-         Consulta de acuses, CURP y ubicación por CEDA. <br>
-         Exporta resultados a CSV.
-      </p>
-      <a href="{% url 'vista_derechohabientes' %}" class="btn btn-success">
-        Abrir Consulta
-      </a>
-    </div>
-  </div>
-</div>
-
-
-
-<!-- Fletes (mv_fletes_enriquecidos) -->
-<div class="col">
-  <div class="card h-100 text-center shadow">
-    <div class="card-body">
-      <h5 class="card-title">🚚 Fletes</h5>
-      <p class="card-text">
-        Consulta y exporta fletes por unidad operativa, estado, zona, estatus,
-        producto, CEDA y folio del flete. <br>
-        Exporta resultados a CSV (y PNG/PPTX donde aplique).
-      </p>
-      <a href="{% url 'vista_fletes' %}" class="btn btn-primary">
-        Abrir Consulta
-      </a>
-    </div>
-  </div>
-</div>
-
-
-
-<!-- Inventario diario Campo vs SIGAP -->
-<div class="col">
-  <div class="card h-100 text-center shadow">
-    <div class="card-body">
-      <h5 class="card-title">📑 Inventario Diario CEDA</h5>
-      <p class="card-text">Comparativo Campo vs SIGAP, por día.</p>
-      <a href="{% url 'vista_inventario_ceda_diario_campo' %}" class="btn btn-success">Ver Inventario</a>
-    </div>
-  </div>
-</div>
-
-<!-- Estadísticas Inventarios Campo -->
-<div class="col">
-  <div class="card h-100 text-center shadow">
-    <div class="card-body">
-      <h5 class="card-title">📈 Estadísticas Inventarios Campo</h5>
-      <p class="card-text">Último inventario, días reportados y RC/COZ.</p>
-      <a href="{% url 'vista_estadisticas_inventarios_campo' %}" class="btn btn-success">Ver Estadísticas</a>
-    </div>
-  </div>
-</div>
-
-
-<!-- Comentarios por CEDA -->
-<div class="col">
-  <div class="card h-100 text-center shadow">
-    <div class="card-body">
-      <h5 class="card-title">🗒️ Comentarios por CEDA</h5>
-      <p class="card-text">Análisis operativo por CEDA y registro de observaciones.</p>
-      <a href="{% url 'comentarios_por_ceda' %}" class="btn btn-success">Ver Comentarios</a>
-    </div>
-  </div>
-</div>
-
-
-<!-- OCR rápido (imágenes / PDF / portapapeles) -->
-<div class="col">
-  <div class="card h-100 text-center shadow">
-    <div class="card-body">
-      <h5 class="card-title">🧾 OCR Rápido</h5>
-      <p class="card-text">
-        Pega capturas, imágenes o PDF y extrae texto plano instantáneo.
-      </p>
-      <a href="{% url 'ocr_page' %}" class="btn btn-info text-white">
-        Abrir OCR
-      </a>
-    </div>
-  </div>
-</div>
-
-
-    </div>
-
 </div>
 {% endblock %}

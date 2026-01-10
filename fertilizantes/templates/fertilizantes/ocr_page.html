@@ -1,224 +1,358 @@
 {% extends 'fertilizantes/base.html' %}
 {% load static %}
 
-{% block title %}OCR Rápido – Extraer texto{% endblock %}
+{% block title %}Herramienta OCR{% endblock %}
 
 {% block content %}
-<h2>🧾 OCR Rápido – Extraer texto plano</h2>
 
-<div class="mb-3 text-muted small">
-  Pega con <strong>⌘/Ctrl + V</strong> o <strong>arrastra</strong> una imagen/PDF al recuadro.
-  Luego pulsa <em>Procesar</em>. Para folios/códigos usa PSM=7 y whitelist.
+<div class="container mt-4 mb-5">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 fw-bold" style="color: #264e46;">
+                <i class="bi bi-upc-scan me-2"></i>Extractor de Texto (OCR)
+            </h1>
+            <p class="text-secondary mb-0">
+                Digitaliza texto de imágenes o PDFs (escaneados, fotos, capturas).
+            </p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-5">
+            
+            <div class="card shadow-sm border-0 mb-3">
+                <div class="card-body p-0">
+                    <div id="drop-zone" class="p-5 text-center" 
+                         style="border: 2px dashed #dee2e6; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
+                        
+                        <div id="drop-content">
+                            <i class="bi bi-cloud-arrow-up text-primary" style="font-size: 3rem;"></i>
+                            <h6 class="mt-3 fw-bold text-secondary">Arrastra archivos aquí</h6>
+                            <p class="text-muted small mb-0">o haz clic para buscar</p>
+                            <p class="text-muted small mt-2">
+                                <span class="badge bg-light text-dark border">Ctrl + V</span> para pegar captura
+                            </p>
+                        </div>
+
+                        <div id="preview-container" class="d-none">
+                            <img id="preview-img" class="img-fluid rounded shadow-sm mb-2" style="max-height: 200px;">
+                            <div id="file-info" class="small fw-bold text-success mb-2"></div>
+                            <button id="btn-change" class="btn btn-sm btn-outline-secondary">Cambiar archivo</button>
+                        </div>
+
+                        <input id="file-input" type="file" accept="image/*,.pdf" hidden>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-0 bg-light">
+                <div class="card-body">
+                    <h6 class="fw-bold text-secondary mb-3"><i class="bi bi-sliders me-2"></i>Configuración</h6>
+                    
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted">Idioma</label>
+                            <select id="cfg-lang" class="form-select form-select-sm">
+                                <option value="spa+eng">Español + Inglés</option>
+                                <option value="spa">Español</option>
+                                <option value="eng">Inglés</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted">Modo (PSM)</label>
+                            <select id="cfg-psm" class="form-select form-select-sm">
+                                <option value="3">Automático (Default)</option>
+                                <option value="6">Bloque de texto uniforme</option>
+                                <option value="7">Una sola línea (Folios)</option>
+                                <option value="4">Columna única</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted">Lista Blanca (Opcional)</label>
+                            <input id="cfg-whitelist" class="form-control form-control-sm" placeholder="Ej: 0123456789ABC (Solo permite estos caracteres)">
+                            <div class="form-text small">Útil para extraer solo números de folios o códigos.</div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2 mt-4">
+                        <button id="btn-process" class="btn btn-primary" style="background-color: #264e46;" disabled>
+                            <span id="spinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                            <span id="btn-text">Extraer Texto</span>
+                        </button>
+                    </div>
+                    <div id="status-msg" class="text-center mt-2 small text-muted"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-7">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+                    <h6 class="fw-bold text-secondary mb-0"><i class="bi bi-file-text me-2"></i>Resultado</h6>
+                    <div class="btn-group">
+                        <button id="btn-copy" class="btn btn-sm btn-outline-secondary" title="Copiar al portapapeles">
+                            <i class="bi bi-clipboard"></i>
+                        </button>
+                        <button id="btn-save" class="btn btn-sm btn-outline-secondary" title="Guardar como .txt">
+                            <i class="bi bi-download"></i>
+                        </button>
+                        <button id="btn-clear" class="btn btn-sm btn-outline-danger" title="Limpiar todo">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <textarea id="output-text" class="form-control border-0 h-100 p-3" 
+                              style="resize: none; font-family: 'Courier New', monospace; font-size: 0.9rem; min-height: 400px;"
+                              placeholder="El texto extraído aparecerá aquí..."></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
-<!-- Controles -->
-<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-  <div>
-    <label class="form-label small mb-1">Idioma</label>
-    <select id="lang" class="form-select form-select-sm">
-      <option value="spa+eng" selected>Español + Inglés</option>
-      <option value="spa">Español</option>
-      <option value="eng">Inglés</option>
-    </select>
-  </div>
-  <div>
-    <label class="form-label small mb-1">PSM</label>
-    <select id="psm" class="form-select form-select-sm">
-      <option value="6" selected>6 – Bloques de texto</option>
-      <option value="7">7 – Línea única / folios</option>
-      <option value="4">4 – Párrafos</option>
-      <option value="11">11 – Texto disperso</option>
-    </select>
-  </div>
-  <div>
-    <label class="form-label small mb-1">Whitelist</label>
-    <input id="whitelist" class="form-control form-control-sm" placeholder="A-Z0-9-/" />
-  </div>
+{% endblock %}
 
-  <button id="process" class="btn btn-sm btn-primary">Procesar</button>
-  <span id="status" class="small text-muted ms-2"></span>
-</div>
-
-<!-- Zona de Drop/Paste -->
-<div id="drop" class="border border-2 border-secondary-subtle rounded-3 p-4 text-center bg-light mb-3"
-     style="cursor:pointer;">
-  <p class="mb-2"><strong>Arrastra y suelta</strong> una imagen o PDF aquí, o haz clic para seleccionar.</p>
-  <p class="text-muted small mb-0">También puedes pegar directamente desde el portapapeles (⌘/Ctrl + V).</p>
-  <input id="file" type="file" accept="image/*,.pdf" hidden>
-  <div class="mt-3">
-    <img id="preview" class="img-fluid d-none rounded" alt="preview" style="max-height:200px;">
-  </div>
-</div>
-
-<!-- Resultado -->
-<div class="mb-2 d-flex gap-2">
-  <button id="copy" class="btn btn-sm btn-outline-secondary">Copiar</button>
-  <button id="save" class="btn btn-sm btn-outline-secondary">Guardar .txt</button>
-  <button id="clear" class="btn btn-sm btn-outline-secondary">Limpiar</button>
-</div>
-
-<textarea id="output" class="form-control" style="min-height: 320px;"
-          placeholder="Aquí aparecerá el texto extraído…"></textarea>
-
-<style>
-  /* Ajustes sutiles como en tus tablas */
-  #drop.dragover {
-    border-color: #86b7fe !important;
-    background: #eef6ff !important;
-  }
-  textarea#output {
-    font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-    font-size: .85rem;
-  }
-</style>
-
+{% block extra_js %}
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-  const drop = document.getElementById('drop');
-  const fileInput = document.getElementById('file');
-  const preview = document.getElementById('preview');
-  const processBtn = document.getElementById('process');
-  const out = document.getElementById('output');
-  const status = document.getElementById('status');
+    
+    // Elementos del DOM
+    const dropZone = document.getElementById('drop-zone');
+    const dropContent = document.getElementById('drop-content');
+    const fileInput = document.getElementById('file-input');
+    const previewContainer = document.getElementById('preview-container');
+    const previewImg = document.getElementById('preview-img');
+    const fileInfo = document.getElementById('file-info');
+    const btnChange = document.getElementById('btn-change');
+    const btnProcess = document.getElementById('btn-process');
+    const outputText = document.getElementById('output-text');
+    const statusMsg = document.getElementById('status-msg');
+    
+    // Variables de estado
+    let activeFile = null;
+    let activeClipboardData = null; // Para guardar base64 si se pega
 
-  let cachedFile = null;       // archivo arrastrado/seleccionado
-  let clipboardDataURL = null; // imagen pegada como dataURL
-
-  // CSRF (Django cookie)
-  function getCookie(name) {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop().split(';').shift();
-  }
-  const csrftoken = getCookie('csrftoken');
-
-  function setStatus(msg){ status.textContent = msg || ""; }
-  function resetPreview(){ preview.classList.add('d-none'); preview.src=""; }
-
-  // Click para abrir selector
-  drop.addEventListener('click', ()=> fileInput.click());
-
-  // Drag & Drop
-  ['dragenter','dragover'].forEach(evt => drop.addEventListener(evt, e=>{
-    e.preventDefault(); e.stopPropagation(); drop.classList.add('dragover');
-  }));
-  ['dragleave','drop'].forEach(evt => drop.addEventListener(evt, e=>{
-    e.preventDefault(); e.stopPropagation(); drop.classList.remove('dragover');
-  }));
-  drop.addEventListener('drop', e=>{
-    const f = e.dataTransfer.files?.[0];
-    if (!f) return;
-    cachedFile = f; clipboardDataURL = null;
-    if (f.type.startsWith('image/')) {
-      const r = new FileReader();
-      r.onload = () => { preview.src = r.result; preview.classList.remove('d-none'); };
-      r.readAsDataURL(f);
-    } else {
-      resetPreview(); // PDF: sin preview
+    // CSRF Token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
     }
-    setStatus(`Listo: ${f.name}`);
-  });
+    const csrftoken = getCookie('csrftoken');
 
-  // Selección manual
-  fileInput.addEventListener('change', e=>{
-    const f = e.target.files?.[0];
-    if (!f) return;
-    cachedFile = f; clipboardDataURL = null;
-    if (f.type.startsWith('image/')) {
-      const r = new FileReader();
-      r.onload = () => { preview.src = r.result; preview.classList.remove('d-none'); };
-      r.readAsDataURL(f);
-    } else {
-      resetPreview();
-    }
-    setStatus(`Listo: ${f.name}`);
-  });
+    // --- Manejo de Drag & Drop y Archivos ---
 
-  // Pegar desde portapapeles
-  window.addEventListener('paste', async (e)=>{
-    const items = e.clipboardData?.items || [];
-    for (const it of items) {
-      if (it.type.startsWith('image/')) {
-        const blob = it.getAsFile();
-        const r = new FileReader();
-        r.onload = ()=> {
-          clipboardDataURL = r.result;  // data:image/...
-          cachedFile = null;
-          preview.src = clipboardDataURL; preview.classList.remove('d-none');
-          setStatus('Imagen pegada desde el portapapeles.');
-        };
-        r.readAsDataURL(blob);
-        return;
-      } else if (it.type === 'application/pdf') {
-        const blob = it.getAsFile();
-        cachedFile = new File([blob], "clipboard.pdf", {type: "application/pdf"});
-        clipboardDataURL = null;
-        resetPreview();
-        setStatus('PDF pegado desde el portapapeles.');
-        return;
-      }
-    }
-  });
+    function handleFile(file) {
+        if (!file) return;
+        
+        activeFile = file;
+        activeClipboardData = null; // Reset clipboard
+        
+        // Mostrar info
+        fileInfo.textContent = `📄 ${file.name}`;
+        
+        // Mostrar preview si es imagen
+        if (file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImg.src = e.target.result;
+                previewImg.classList.remove('d-none');
+            };
+            reader.readAsDataURL(file);
+        } else {
+            // Es PDF u otro
+            previewImg.classList.add('d-none'); // Ocultar imagen, mostrar solo nombre
+        }
 
-  async function processOCR(){
-    setStatus('Procesando…');
-    processBtn.disabled = true;
-    const lang = document.getElementById('lang').value;
-    const psm = document.getElementById('psm').value;
-    const whitelist = document.getElementById('whitelist').value.trim();
-
-    const form = new FormData();
-    form.append('lang', lang);
-    form.append('psm', psm);
-    if (whitelist) form.append('whitelist', whitelist);
-
-    if (cachedFile) {
-      form.append('file', cachedFile, cachedFile.name);
-    } else if (clipboardDataURL) {
-      form.append('clipboard_data', clipboardDataURL);
-    } else {
-      setStatus('Selecciona o pega una imagen/PDF primero.');
-      processBtn.disabled = false;
-      return;
+        // Cambiar UI
+        dropContent.classList.add('d-none');
+        previewContainer.classList.remove('d-none');
+        btnProcess.disabled = false;
+        dropZone.style.borderColor = "#264e46";
+        statusMsg.textContent = "Listo para procesar.";
+        statusMsg.className = "text-center mt-2 small text-success fw-bold";
     }
 
-    try {
-      const res = await fetch("{% url 'ocr_extract' %}", {
-        method: "POST",
-        headers: {'X-CSRFToken': csrftoken},
-        body: form
-      });
-      if (!res.ok) throw new Error(await res.text());
-      const data = await res.json();
-      out.value = (data.text || '').trim();
-      setStatus('Listo ✅');
-    } catch (err) {
-      console.error(err);
-      setStatus('Error en OCR: ' + err.message);
-    } finally {
-      processBtn.disabled = false;
+    function resetUI() {
+        activeFile = null;
+        activeClipboardData = null;
+        fileInput.value = "";
+        previewImg.src = "";
+        
+        dropContent.classList.remove('d-none');
+        previewContainer.classList.add('d-none');
+        btnProcess.disabled = true;
+        dropZone.style.borderColor = "#dee2e6";
+        dropZone.style.backgroundColor = "white";
+        statusMsg.textContent = "";
+        outputText.value = "";
     }
-  }
 
-  document.getElementById('process').addEventListener('click', processOCR);
+    // Eventos Drag & Drop
+    dropZone.addEventListener('click', (e) => {
+        if(e.target !== btnChange) fileInput.click();
+    });
 
-  document.getElementById('copy').addEventListener('click', async ()=>{
-    await navigator.clipboard.writeText(out.value || '');
-    setStatus('Texto copiado al portapapeles.');
-  });
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.style.backgroundColor = "#eef6f5"; // Un verde muy suave
+        dropZone.style.borderColor = "#264e46";
+    });
 
-  document.getElementById('save').addEventListener('click', ()=>{
-    const blob = new Blob([out.value || ""], {type: "text/plain;charset=utf-8"});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = "ocr.txt";
-    a.click();
-    URL.revokeObjectURL(a.href);
-  });
+    dropZone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        if (!activeFile && !activeClipboardData) {
+            dropZone.style.backgroundColor = "white";
+            dropZone.style.borderColor = "#dee2e6";
+        }
+    });
 
-  document.getElementById('clear').addEventListener('click', ()=>{
-    out.value = ""; cachedFile = null; clipboardDataURL = null; resetPreview(); setStatus('');
-  });
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleFile(files[0]);
+        }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleFile(e.target.files[0]);
+        }
+    });
+
+    btnChange.addEventListener('click', (e) => {
+        e.stopPropagation();
+        resetUI();
+    });
+
+    // --- Manejo del Portapapeles (Paste) ---
+    window.addEventListener('paste', (e) => {
+        const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+        for (let index in items) {
+            const item = items[index];
+            if (item.kind === 'file') {
+                const blob = item.getAsFile();
+                
+                // Si es imagen, la mostramos
+                if (item.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        activeClipboardData = event.target.result; // DataURL
+                        activeFile = null;
+                        
+                        previewImg.src = activeClipboardData;
+                        previewImg.classList.remove('d-none');
+                        fileInfo.textContent = "📸 Captura desde portapapeles";
+                        
+                        dropContent.classList.add('d-none');
+                        previewContainer.classList.remove('d-none');
+                        btnProcess.disabled = false;
+                        dropZone.style.borderColor = "#264e46";
+                        statusMsg.textContent = "Imagen pegada detectada.";
+                    };
+                    reader.readAsDataURL(blob);
+                } 
+                // Si es PDF
+                else if (item.type === 'application/pdf') {
+                    // Tratar como archivo
+                    const pdfFile = new File([blob], "pegado.pdf", { type: "application/pdf" });
+                    handleFile(pdfFile);
+                }
+            }
+        }
+    });
+
+    // --- Procesamiento (Enviar al Backend) ---
+    btnProcess.addEventListener('click', async () => {
+        const btnText = document.getElementById('btn-text');
+        const spinner = document.getElementById('spinner');
+        
+        // UI Loading
+        btnProcess.disabled = true;
+        btnText.textContent = "Procesando...";
+        spinner.classList.remove('d-none');
+        statusMsg.textContent = "Enviando datos al servidor...";
+        statusMsg.className = "text-center mt-2 small text-muted";
+
+        const formData = new FormData();
+        
+        // Agregar configuración
+        formData.append('lang', document.getElementById('cfg-lang').value);
+        formData.append('psm', document.getElementById('cfg-psm').value);
+        formData.append('whitelist', document.getElementById('cfg-whitelist').value);
+
+        // Agregar archivo o datos
+        if (activeFile) {
+            formData.append('file', activeFile);
+        } else if (activeClipboardData) {
+            formData.append('clipboard_data', activeClipboardData);
+        }
+
+        try {
+            const response = await fetch("{% url 'ocr_extract' %}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrftoken
+                },
+                body: formData
+            });
+
+            if (!response.ok) {
+                const errData = await response.text();
+                throw new Error(errData || "Error en el servidor");
+            }
+
+            const data = await response.json();
+            
+            // Éxito
+            outputText.value = data.texto;
+            statusMsg.textContent = "¡Texto extraído con éxito!";
+            statusMsg.className = "text-center mt-2 small text-success fw-bold";
+
+        } catch (error) {
+            console.error(error);
+            outputText.value = `ERROR:\n${error.message}`;
+            statusMsg.textContent = "Ocurrió un error. Intenta de nuevo.";
+            statusMsg.className = "text-center mt-2 small text-danger fw-bold";
+        } finally {
+            // Restaurar botón
+            btnProcess.disabled = false;
+            btnText.textContent = "Extraer Texto";
+            spinner.classList.add('d-none');
+        }
+    });
+
+    // --- Botones de Acción (Resultado) ---
+    document.getElementById('btn-copy').addEventListener('click', () => {
+        outputText.select();
+        document.execCommand('copy'); // Fallback o usar navigator.clipboard
+        statusMsg.textContent = "Texto copiado al portapapeles.";
+    });
+
+    document.getElementById('btn-save').addEventListener('click', () => {
+        const blob = new Blob([outputText.value], { type: "text/plain;charset=utf-8" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "texto_extraido.txt";
+        link.click();
+    });
+
+    document.getElementById('btn-clear').addEventListener('click', () => {
+        resetUI();
+    });
+
 });
 </script>
 {% endblock %}
