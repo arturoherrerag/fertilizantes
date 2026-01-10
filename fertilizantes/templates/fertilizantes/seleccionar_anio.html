@@ -1,0 +1,143 @@
+{% extends 'fertilizantes/base.html' %}
+
+{% block title %}Seleccionar año{% endblock %}
+
+{% block extra_css %}
+<style>
+  .year-select-wrapper {
+    min-height: 60vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .year-card {
+    border-radius: 12px;
+    border: 2px solid #e0e0e0;
+    padding: 1.5rem;
+    text-align: center;
+    transition: all 0.2s ease-in-out;
+    cursor: pointer;
+    background-color: #ffffff;
+  }
+
+  .year-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+  }
+
+  .year-card-btn {
+    border: none;
+    background: none;
+    width: 100%;
+  }
+
+  .year-number {
+    font-size: 2.8rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+  }
+
+  .year-subtitle {
+    font-size: 0.95rem;
+    color: #666;
+  }
+
+  /* Colores por año (usando tu paleta) */
+  .year-2025 .year-number {
+    color: #9b2247; /* Pantone 7420 C */
+  }
+
+  .year-2026 .year-number {
+    color: #1e5b4f; /* Pantone 626 C */
+  }
+
+  /* Estado activo */
+  .year-card-active {
+    border-color: #1e5b4f;
+    box-shadow: 0 0 0 3px rgba(30,91,79,0.15);
+  }
+
+  .year-badge {
+    display: inline-block;
+    padding: 0.15rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+  }
+
+  .year-badge-2025 {
+    background-color: #9b2247;
+    color: #fff;
+  }
+
+  .year-badge-2026 {
+    background-color: #1e5b4f;
+    color: #fff;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="year-select-wrapper">
+  <div class="container">
+    <div class="row justify-content-center mb-4">
+      <div class="col-md-8 text-center">
+        <h2 class="mb-2">Selecciona el año de trabajo</h2>
+        <p class="text-muted mb-0">
+          Elige si deseas consultar la operación histórica de <strong>2025</strong>
+          o la operación en curso de <strong>2026</strong>.
+        </p>
+      </div>
+    </div>
+
+    <form method="post">
+      {% csrf_token %}
+      <div class="row justify-content-center g-4">
+        <!-- Tarjeta 2025 -->
+        <div class="col-md-4">
+          <button
+            type="submit"
+            name="anio"
+            value="2025"
+            class="year-card-btn"
+          >
+            <div class="year-card year-2025 {% if anio_actual == '2025' %}year-card-active{% endif %}">
+              <div class="year-number">2025</div>
+              <div class="year-subtitle">Histórico del Programa</div>
+              <span class="year-badge year-badge-2025">
+                {% if anio_actual == '2025' %}Año actual{% else %}Cambiar a 2025{% endif %}
+              </span>
+            </div>
+          </button>
+        </div>
+
+        <!-- Tarjeta 2026 -->
+        <div class="col-md-4">
+          <button
+            type="submit"
+            name="anio"
+            value="2026"
+            class="year-card-btn"
+          >
+            <div class="year-card year-2026 {% if anio_actual == '2026' %}year-card-active{% endif %}">
+              <div class="year-number">2026</div>
+              <div class="year-subtitle">Operación en curso</div>
+              <span class="year-badge year-badge-2026">
+                {% if anio_actual == '2026' %}Año actual{% else %}Cambiar a 2026{% endif %}
+              </span>
+            </div>
+          </button>
+        </div>
+      </div>
+    </form>
+
+    <div class="row justify-content-center mt-4">
+      <div class="col-md-6 text-center text-muted" style="font-size:0.9rem;">
+        Año actualmente seleccionado en la sesión:
+        <strong>{{ anio_actual }}</strong>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

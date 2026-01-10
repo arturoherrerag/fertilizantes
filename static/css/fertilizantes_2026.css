@@ -1,0 +1,160 @@
+/* static/css/fertilizantes_2026.css */
+
+/* Paleta institucional 2026 */
+:root {
+  --pf-neutral-black: #161a1d;
+  --pf-gray: #98989A;
+  --pf-green-dark: #002f2a;
+  --pf-green-main: #1e5b4f;
+  --pf-gold: #a57f2c;
+  --pf-gold-light: #e6d194;
+  --pf-burgundy: #611232;
+  --pf-magenta: #9b2247;
+
+  --pf-bg-main: #f7f7f7;
+  --pf-bg-card: #ffffff;
+}
+
+/* Layout general */
+body {
+  background: radial-gradient(circle at top left, #fdfbf6 0, var(--pf-bg-main) 55%, #f3f3f3 100%);
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  color: var(--pf-neutral-black);
+}
+
+/* Navbar 2026 */
+.navbar-pf-2026 {
+  background-color: var(--pf-green-dark);
+}
+
+.navbar-pf-2026 .navbar-brand {
+  color: #ffffff;
+  font-weight: 600;
+  letter-spacing: .02em;
+}
+
+.navbar-pf-2026 .nav-link {
+  color: #e5e5e5;
+  font-weight: 500;
+}
+
+.navbar-pf-2026 .nav-link:hover,
+.navbar-pf-2026 .nav-link.active {
+  color: #ffffff;
+  border-bottom: 2px solid var(--pf-gold);
+}
+
+/* Selector de año */
+.pf-year-toggle .btn {
+  border-radius: 999px;
+  padding-inline: 1.25rem;
+  font-size: 0.8rem;
+}
+
+.pf-year-toggle .btn-pf-year-active {
+  background-color: var(--pf-gold);
+  border-color: var(--pf-gold);
+  color: var(--pf-neutral-black);
+}
+
+.pf-year-toggle .btn-pf-year-inactive {
+  background-color: transparent;
+  border-color: #ffffff55;
+  color: #f5f5f5;
+}
+
+/* Cards generales */
+.pf-card {
+  background: var(--pf-bg-card);
+  border-radius: 1rem;
+  border: 1px solid #e1e1e1;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.04);
+}
+
+.pf-card-header {
+  border-bottom: 1px solid #eeeeee;
+  padding: 1rem 1.5rem;
+  font-weight: 600;
+  color: var(--pf-green-dark);
+}
+
+.pf-card-body {
+  padding: 1.5rem;
+}
+
+/* Botones */
+.btn-pf-primary {
+  background-color: var(--pf-green-main);
+  border-color: var(--pf-green-main);
+  color: #ffffff;
+}
+
+.btn-pf-primary:hover {
+  background-color: #00463a;
+  border-color: #00463a;
+}
+
+.btn-pf-outline {
+  border-color: var(--pf-green-main);
+  color: var(--pf-green-main);
+  background-color: transparent;
+}
+
+.btn-pf-outline:hover {
+  background-color: var(--pf-green-main);
+  color: #ffffff;
+}
+
+/* Tarjetas KPI anillo (las que ya tienes para Avance Nacional 2026) */
+.kpi-card-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+}
+
+.kpi-main-value {
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.kpi-meta {
+  font-size: 0.9rem;
+  color: var(--pf-gray);
+}
+
+.kpi-pendiente {
+  font-size: 0.9rem;
+  color: var(--pf-magenta);
+  font-weight: 600;
+}
+
+/* Borde superior por tipo (2026) */
+.card.border-abasto-2026 {
+  border-top: 12px solid var(--pf-green-dark);
+}
+.card.border-entregado-2026 {
+  border-top: 12px solid var(--pf-green-main);
+}
+.card.border-dh-2026 {
+  border-top: 12px solid var(--pf-burgundy);
+}
+.card.border-superficie-2026 {
+  border-top: 12px solid var(--pf-gold);
+}
+
+/* Footer */
+.footer-pf-2026 {
+  font-size: 0.85rem;
+  color: var(--pf-gray);
+  text-align: center;
+  padding: 1.25rem 0 1.5rem;
+  border-top: 1px solid #dddddd;
+  margin-top: 2rem;
+}
+.footer-pf-2026 a {
+  color: var(--pf-green-main);
+  text-decoration: none;
+}
+.footer-pf-2026 a:hover {
+  text-decoration: underline;
+}
