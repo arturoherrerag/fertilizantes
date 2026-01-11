@@ -46,9 +46,38 @@ except Exception:
     HAS_PDF = False
 
 
+from .conexion import get_psycopg_conn_for_year
+
+
 # ==========================================
 # 🛠️ HELPERS Y UTILIDADES GLOBALES
 # ==========================================
+
+# ... (mantén get_anio_context y CAMPOS_DH igual) ...
+
+def get_table_and_conn(request, base_table_name):
+    """
+    Determina el nombre real de la tabla y la conexión a BD según el año activo.
+    Retorna: (nombre_tabla_final, objeto_conexion, es_conexion_django)
+    """
+    anio = get_anio_context(request)
+    
+    if anio == "2026":
+        # Lógica para 2026: BD externa y sufijo _2026
+        # Excepción: Si la tabla base ya trae el año (raro, pero posible), no lo duplicamos
+        if base_table_name.endswith("_2026"):
+            table_name = base_table_name
+        else:
+            table_name = f"{base_table_name}_2026"
+            
+        conn = get_psycopg_conn_for_year(2026)
+        return table_name, conn, False # False = No es la conexión default de Django
+        
+    else:
+        # Lógica para 2025 (Default): BD actual y nombre base
+        return base_table_name, connection, True # True = Es conexión Django
+
+
 
 def get_anio_context(request):
     """
@@ -314,21 +343,54 @@ def api_tabla_resumen_por_estado(request):
 
 @login_required
 def vista_fletes_transito(request):
-    with connection.cursor() as cursor:
-        cursor.execute("SELECT * FROM fletes_en_transito_resumen_estado ORDER BY max_dias_en_transito DESC")
-        columnas = [col[0] for col in cursor.description]
-        datos = [dict(zip(columnas, fila)) for fila in cursor.fetchall()]
+    # 1. Obtener configuración dinámica
+    tabla, conn, es_django = get_table_and_conn(request, "fletes_en_transito_resumen_estado")
     
+    datos = []
     totales = {
-        'fletes_transito_dap': sum(d['fletes_transito_dap'] for d in datos),
-        'fletes_transito_urea': sum(d['fletes_transito_urea'] for d in datos),
-        'total_fletes_transito': sum(d['total_fletes_transito'] for d in datos),
-        'ton_transito_dap': sum(d['ton_transito_dap'] for d in datos),
-        'ton_transito_urea': sum(d['ton_transito_urea'] for d in datos),
-        'total_ton_transito': sum(d['total_ton_transito'] for d in datos),
-        'max_dias_en_transito': max((d['max_dias_en_transito'] for d in datos), default=0),
+        'fletes_transito_dap': 0, 'fletes_transito_urea': 0, 'total_fletes_transito': 0,
+        'ton_transito_dap': 0, 'ton_transito_urea': 0, 'total_ton_transito': 0,
+        'max_dias_en_transito': 0
     }
+
+    try:
+        # 2. Ejecutar consulta
+        with conn.cursor() as cursor:
+            cursor.execute(f"SELECT * FROM {tabla} ORDER BY max_dias_en_transito DESC")
+            
+            # Normalizar obtención de columnas (Django vs Psycopg2 raw)
+            if es_django:
+                columnas = [col[0] for col in cursor.description]
+            else:
+                # Psycopg2 nativo devuelve objetos Column, pero el índice 0 suele ser el nombre también.
+                # Por seguridad usamos .name si existe, si no index 0
+                columnas = [col.name if hasattr(col, 'name') else col[0] for col in cursor.description]
+            
+            datos = [dict(zip(columnas, fila)) for fila in cursor.fetchall()]
+    
+    except Exception as e:
+        print(f"Error en vista_fletes_transito: {e}")
+        # Opcional: Agregar un mensaje flash al usuario
+    
+    finally:
+        # 3. IMPORTANTE: Cerrar conexión si es la manual (2026) para no saturar el pool
+        if not es_django and conn:
+            conn.close()
+    
+    # 4. Calcular totales (Lógica Python se mantiene igual)
+    if datos:
+        totales = {
+            'fletes_transito_dap': sum((d.get('fletes_transito_dap') or 0) for d in datos),
+            'fletes_transito_urea': sum((d.get('fletes_transito_urea') or 0) for d in datos),
+            'total_fletes_transito': sum((d.get('total_fletes_transito') or 0) for d in datos),
+            'ton_transito_dap': sum((d.get('ton_transito_dap') or 0) for d in datos),
+            'ton_transito_urea': sum((d.get('ton_transito_urea') or 0) for d in datos),
+            'total_ton_transito': sum((d.get('total_ton_transito') or 0) for d in datos),
+            'max_dias_en_transito': max(((d.get('max_dias_en_transito') or 0) for d in datos), default=0),
+        }
+
     return render(request, 'fertilizantes/vista_fletes_transito.html', {'datos': datos, 'totales': totales})
+    
 
 @login_required
 def vista_fletes_transito_por_CEDA(request):
