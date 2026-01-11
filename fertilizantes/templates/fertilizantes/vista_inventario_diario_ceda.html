@@ -15,6 +15,7 @@
         vertical-align: middle;
         font-weight: 500;
         white-space: nowrap;
+        text-align: center;
     }
     
     /* Fondo sutil para columnas de Inventario (Saldo) */
@@ -25,6 +26,14 @@
     /* Bordes limpios */
     .table-bordered > :not(caption) > * > * {
         border-width: 0 0 1px 0;
+    }
+    
+    /* Ajuste para inputs en la misma línea */
+    .form-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #6c757d;
+        text-transform: uppercase;
     }
 </style>
 
@@ -44,30 +53,49 @@
         </button>
     </div>
 
+    <!-- TARJETA DE BÚSQUEDA -->
     <div class="card shadow-sm border-0 mb-4" style="background-color: #f8f9fa;">
         <div class="card-body p-4">
             <h6 class="card-title fw-bold text-secondary mb-3">
-                <i class="bi bi-search me-1"></i> Buscar CEDA
+                <i class="bi bi-search me-1"></i> Criterios de Búsqueda
             </h6>
             <form method="get" id="filtros-form" class="row g-3 align-items-end">
+                <!-- Campo ID CEDA -->
                 <div class="col-md-5">
-                    <label for="ceda" class="form-label small text-muted text-uppercase fw-bold">ID CEDA Agricultura</label>
-                    <div class="input-group">
-                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-hash"></i></span>
-                        <input type="text" name="ceda" id="ceda" class="form-control border-start-0" 
+                    <label for="ceda" class="form-label">ID CEDA Agricultura</label>
+                    <div class="input-group shadow-sm">
+                        <span class="input-group-text bg-white border-0"><i class="bi bi-hash"></i></span>
+                        <input type="text" name="ceda" id="ceda" class="form-control border-0" 
                                value="{{ ceda }}" placeholder="Ej. CTT-3930-TENEJAPA">
                     </div>
                 </div>
+
+                <!-- Campo Fecha de Corte -->
+                <div class="col-md-3">
+                    <label for="fecha_corte" class="form-label">Fecha de Corte (Opcional)</label>
+                    <input type="date" name="fecha_corte" id="fecha_corte" 
+                           class="form-control border-0 shadow-sm" 
+                           value="{{ fecha_corte }}">
+                </div>
+
+                <!-- Botones -->
                 <div class="col-md-2">
-                    <button type="submit" class="btn text-white w-100" style="background-color: #264e46;">
+                    <button type="submit" class="btn text-white w-100 shadow-sm" style="background-color: #264e46;">
                         <i class="bi bi-search me-2"></i>Buscar
                     </button>
+                </div>
+                
+                <div class="col-md-2">
+                    <a href="{% url 'vista_inventario_diario_ceda' %}" class="btn btn-outline-secondary w-100 shadow-sm">
+                        <i class="bi bi-eraser me-1"></i>Limpiar
+                    </a>
                 </div>
             </form>
         </div>
     </div>
 
     {% if ceda_info %}
+    <!-- INFORMACIÓN DEL CEDA -->
     <div class="card shadow-sm border-0 mb-4 border-start border-4" style="border-left-color: #264e46 !important;">
         <div class="card-body p-4">
             <h5 class="fw-bold text-dark mb-3">
@@ -96,11 +124,17 @@
     {% endif %}
 
     {% if resumen %}
+    <!-- RESUMEN DE SALDOS -->
     <div class="card shadow-sm border-0 mb-4">
-        <div class="card-header bg-white border-bottom pt-3 pb-2">
+        <div class="card-header bg-white border-bottom pt-3 pb-2 d-flex justify-content-between align-items-center">
             <h6 class="fw-bold text-secondary mb-0">
-                <i class="bi bi-box-seam me-2"></i>Inventario Actual (Toneladas)
+                <i class="bi bi-box-seam me-2"></i>Inventario al Corte (Toneladas)
             </h6>
+            <!-- CORRECCIÓN DE FECHA: Usamos formato seguro -->
+            <span class="badge bg-light text-dark border">
+                <i class="bi bi-clock-history me-1"></i>
+                Corte al: {{ resumen.fecha_corte|date:"d" }} de {{ resumen.fecha_corte|date:"F Y" }}
+            </span>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
@@ -131,6 +165,7 @@
     </div>
     {% endif %}
 
+    <!-- TABLA DE MOVIMIENTOS -->
     <div class="card shadow-sm border-0">
         <div class="card-body p-0">
             <div class="table-responsive rounded-top">
@@ -172,7 +207,7 @@
                             <td colspan="7" class="text-center py-5 text-muted">
                                 {% if ceda %}
                                     <i class="bi bi-folder-x fs-1 d-block mb-2"></i>
-                                    No hay historial registrado para este CEDA.
+                                    No hay historial registrado para este CEDA en el rango seleccionado.
                                 {% else %}
                                     <i class="bi bi-arrow-up-circle fs-1 d-block mb-2"></i>
                                     Ingresa un ID de CEDA para ver el historial.
