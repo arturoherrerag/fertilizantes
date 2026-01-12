@@ -6,27 +6,38 @@
 {% block content %}
 
 <style>
-    /* 1. Forzamos que TODO el encabezado sea verde oscuro y texto blanco */
+    /* 1. Encabezado Institucional */
     .tabla-header-institucional th {
-        background-color: #264e46 !important; /* El verde institucional */
+        background-color: #264e46 !important;
         color: #ffffff !important;
         border-bottom: none;
         vertical-align: middle;
+        font-weight: 500;
     }
 
-    /* 2. Color de fondo sutil para las columnas verticales de TOTALES (solo en el cuerpo) */
+    /* 2. Columnas destacadas */
     .bg-columna-total {
-        background-color: #f2f4f4 !important; /* Un gris/verde muy pálido */
+        background-color: #f2f4f4 !important;
     }
 
-    /* 3. Ajuste para quitar bordes dobles molestos */
+    /* 3. Ajuste bordes */
     .table-bordered > :not(caption) > * > * {
         border-width: 0 0 1px 0;
+    }
+
+    /* 4. Ocultar tabla de exportación */
+    #contenedor-tabla-oculta {
+        height: 0px;
+        width: 0px;
+        overflow: hidden;
+        position: absolute;
+        left: -9999px;
     }
 </style>
 
 <div class="container mt-4 mb-5">
 
+    <!-- ENCABEZADO CON BOTONES -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="h3 fw-bold" style="color: #264e46;">
@@ -36,11 +47,17 @@
                 Monitoreo detallado de unidades en ruta desglosado por estado.
             </p>
         </div>
-        <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
-            <i class="bi bi-printer me-1"></i> Imprimir
-        </button>
+        <div class="btn-group">
+            <button class="btn btn-success btn-sm text-white" onclick="descargarCSV()">
+                <i class="bi bi-file-earmark-excel me-1"></i> Descargar CSV
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+                <i class="bi bi-printer me-1"></i> Imprimir
+            </button>
+        </div>
     </div>
 
+    <!-- TARJETA DE RESUMEN (TOTALES) -->
     <div class="card shadow-sm border-0 mb-5">
         <div class="card-header bg-white border-bottom pt-3 pb-2">
             <h6 class="fw-bold text-secondary mb-0">
@@ -85,11 +102,11 @@
         </div>
     </div>
 
+    <!-- TABLA PRINCIPAL DE DATOS -->
     <div class="card shadow-sm border-0">
         <div class="card-body p-0">
             <div class="table-responsive rounded-top">
                 <table class="table table-hover mb-0 align-middle">
-                    
                     <thead class="tabla-header-institucional">
                         <tr>
                             <th class="py-3 ps-4">Estado</th>
@@ -171,4 +188,70 @@
     </div>
 
 </div>
+
+<!-- TABLA OCULTA PARA EXPORTACIÓN (Sin formato visual, solo datos) -->
+<div id="contenedor-tabla-oculta">
+    <table id="tabla-exportar">
+        <thead>
+            <tr>
+                <th>Estado</th>
+                <th>Fletes DAP</th>
+                <th>Fletes UREA</th>
+                <th>Total Fletes</th>
+                <th>Ton DAP</th>
+                <th>Ton UREA</th>
+                <th>Total Toneladas</th>
+                <th>Máximo Días en Tránsito</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for fila in datos %}
+            <tr>
+                <td>{{ fila.estado }}</td>
+                <td>{{ fila.fletes_transito_dap }}</td>
+                <td>{{ fila.fletes_transito_urea }}</td>
+                <td>{{ fila.total_fletes_transito }}</td>
+                <td>{{ fila.ton_transito_dap }}</td>
+                <td>{{ fila.ton_transito_urea }}</td>
+                <td>{{ fila.total_ton_transito }}</td>
+                <td>{{ fila.max_dias_en_transito }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function descargarCSV() {
+        const tabla = document.getElementById("tabla-exportar");
+        let filas = Array.from(tabla.querySelectorAll("tr"));
+        
+        let csvContent = filas.map(fila => {
+            let celdas = Array.from(fila.querySelectorAll("th, td"));
+            return celdas.map(celda => {
+                let texto = celda.textContent.replace(/(\r\n|\n|\r)/gm, " ").trim();
+                if (texto.includes(",")) {
+                    return `"${texto}"`;
+                }
+                return texto;
+            }).join(","); 
+        }).join("\n"); 
+
+        const bom = "\uFEFF"; 
+        const blob = new Blob([bom + csvContent], { type: "text/csv;charset=utf-8;" });
+        
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", "Resumen_Fletes_Transito.csv");
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+</script>
 {% endblock %}

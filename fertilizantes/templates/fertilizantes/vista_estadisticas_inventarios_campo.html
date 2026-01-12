@@ -6,7 +6,7 @@
 {% block content %}
 
 <style>
-    /* --- Estilos Tabla Compacta --- */
+    /* Estilos Institucionales */
     .tabla-header-institucional th {
         background-color: #264e46 !important;
         color: #ffffff !important;
@@ -26,64 +26,22 @@
 
     .oculto { display: none !important; }
     
-    /* --- SEMÁFORO CORREGIDO (Colores Oficiales) --- */
+    /* Semáforos */
+    .badge-faltante-grave { background-color: #dc3545 !important; color: white !important; font-weight: 700; }
+    .badge-faltante-menor { background-color: #fff5f5 !important; color: #dc3545 !important; border: 1px solid #f8d7da; }
+    .badge-excedente-grave { background-color: #b8860b !important; color: white !important; font-weight: 700; }
+    .badge-excedente-menor { background-color: #fff3cd !important; color: #856404 !important; border: 1px solid #ffeeba; }
+    .badge-ok { color: #198754; font-weight: 700; font-size: 1.1em; }
     
-    /* 1. FALTANTE (Rojo) */
-    .badge-faltante-grave {
-        background-color: #dc3545 !important; 
-        color: white !important; 
-        font-weight: 700;
-        border: 1px solid #a71d2a;
-    }
-    .badge-faltante-menor {
-        background-color: #fff5f5 !important; 
-        color: #dc3545 !important; 
-        border: 1px solid #f8d7da;
-        font-weight: 600;
-    }
-
-    /* 2. EXCEDENTE (Dorado/Amarillo Institucional) */
-    /* Para diferencias grandes (> 1t, probables fletes mal ubicados) */
-    .badge-excedente-grave {
-        background-color: #b8860b !important; /* DarkGoldenRod */
-        color: white !important; 
-        font-weight: 700;
-        border: 1px solid #8b6508;
-    }
-
-    /* Para diferencias chicas (bultos, entregas no registradas) */
-    .badge-excedente-menor {
-        background-color: #fff3cd !important; 
-        color: #856404 !important; 
-        border: 1px solid #ffeeba;
-        font-weight: 600;
-    }
-
-    /* 3. CORRECTO */
-    .badge-ok {
-        color: #198754;
-        font-weight: 700;
-        font-size: 1.1em;
-    }
-    
-    /* Estilos para texto de diferencias numéricas */
     .txt-faltante { color: #dc3545; font-weight: bold; }
-    .txt-excedente { color: #b8860b; font-weight: bold; } /* Dorado oscuro para leerse sobre blanco/gris */
+    .txt-excedente { color: #b8860b; font-weight: bold; }
+    
+    /* Estilos Clean Form */
+    .form-label-custom { font-size: 0.75rem; color: #6c757d; text-transform: uppercase; font-weight: 700; margin-bottom: 0.25rem; }
+    .input-custom { border: 0 !important; box-shadow: 0 .125rem .25rem rgba(0,0,0,.075) !important; }
 
-    /* Cumplimiento (Reportó ayer) */
-    .cumplimiento-fail { 
-        color: #dc3545; 
-        font-weight: bold; 
-        background-color: #f8d7da; 
-        padding: 2px 6px; 
-        border-radius: 4px; 
-    }
-
-    .bg-confidencial { 
-        background-color: #f8f9fa;
-        color: #6c757d;
-        border-left: 2px solid #dee2e6 !important;
-    }
+    /* Tabla Oculta */
+    #contenedor-tabla-oculta { height: 0px; width: 0px; overflow: hidden; position: absolute; left: -9999px; }
 </style>
 
 <div class="container-fluid mt-4 mb-5">
@@ -98,12 +56,16 @@
             </p>
         </div>
         <div class="btn-group">
+            <button class="btn btn-success btn-sm text-white" onclick="descargarCSV()">
+                <i class="bi bi-file-earmark-excel me-1"></i> Descargar CSV
+            </button>
             <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
                 <i class="bi bi-printer me-1"></i> Imprimir
             </button>
         </div>
     </div>
 
+    <!-- FILTROS -->
     <div class="card shadow-sm border-0 mb-4 bg-light">
         <div class="card-body p-4">
             <h6 class="fw-bold text-secondary mb-3">
@@ -111,35 +73,32 @@
             </h6>
             <form method="get" class="row g-3 align-items-end" id="filtros-form">
                 <div class="col-md-3">
-                    <label class="form-label small text-muted text-uppercase fw-bold">Unidad Operativa</label>
-                    <select name="unidad_operativa" id="unidad_operativa" class="form-select border-0 shadow-sm">
+                    <label class="form-label-custom">Unidad Operativa</label>
+                    <select name="unidad_operativa" id="unidad_operativa" class="form-select input-custom">
                         <option value="">-- Todas --</option>
                         {% for u in unidades %}
-                            <option value="{{ u }}" {% if u == request.GET.unidad_operativa %}selected{% endif %}>{{ u }}</option>
+                            <option value="{{ u }}" {% if u == unidad_seleccionada %}selected{% endif %}>{{ u }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label small text-muted text-uppercase fw-bold">Estado</label>
-                    <select name="estado" id="estado" class="form-select border-0 shadow-sm">
+                    <label class="form-label-custom">Estado</label>
+                    <select name="estado" id="estado" class="form-select input-custom">
                         <option value="">-- Todos --</option>
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label small text-muted text-uppercase fw-bold">Zona Operativa</label>
-                    <select name="zona_operativa" id="zona_operativa" class="form-select border-0 shadow-sm">
+                    <label class="form-label-custom">Zona Operativa</label>
+                    <select name="zona_operativa" id="zona_operativa" class="form-select input-custom">
                         <option value="">-- Todos --</option>
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label small text-muted text-uppercase fw-bold">ID CEDA</label>
-                    <input type="text" name="id_ceda_agricultura" class="form-control border-0 shadow-sm" value="{{ request.GET.id_ceda_agricultura }}" placeholder="Ej. CTT-3930">
+                    <label class="form-label-custom">ID CEDA</label>
+                    <input type="text" name="id_ceda_agricultura" class="form-control input-custom" value="{{ request.GET.id_ceda_agricultura }}" placeholder="Ej. CTT-3930">
                 </div>
                 <div class="col-12 text-end mt-3">
-                    <button type="button" class="btn btn-success text-white shadow-sm me-2" onclick="descargarCSV()">
-                        <i class="bi bi-file-earmark-excel me-1"></i> Descargar CSV
-                    </button>
-                    <button type="submit" class="btn btn-primary px-4 shadow-sm" style="background-color: #264e46;">
+                    <button type="submit" class="btn btn-primary px-4 shadow-sm" style="background-color: #264e46; border-color: #264e46;">
                         <i class="bi bi-search me-1"></i> Consultar
                     </button>
                 </div>
@@ -152,23 +111,74 @@
     {% endif %}
 
     {% if datos %}
-    <div class="card shadow-sm border-0 mb-3 bg-white border-start border-4 border-secondary">
+    
+    <!-- 1. CONTROL DE VISUALIZACIÓN -->
+    <div class="card shadow-sm border-0 mb-3 bg-white">
         <div class="card-body py-2 d-flex justify-content-between align-items-center">
             <div class="small text-muted fw-bold text-uppercase">
-                <i class="bi bi-eye-fill me-2"></i>Control de Visualización (Captura)
+                <i class="bi bi-eye-fill me-2"></i>Control de Visualización
             </div>
-            
             <div class="btn-group">
-                <button id="toggle-ubicacion" class="btn btn-sm btn-outline-secondary">
-                    Mostrar Ubicación
-                </button>
-                <button id="toggle-confidencial" class="btn btn-sm btn-outline-danger">
-                    <i class="bi bi-lock-fill me-1"></i> Mostrar Datos Sistema
-                </button>
+                <button id="toggle-ubicacion" class="btn btn-sm btn-outline-secondary">Mostrar Ubicación</button>
+                <button id="toggle-confidencial" class="btn btn-sm btn-outline-danger"><i class="bi bi-lock-fill me-1"></i> Mostrar Datos Sistema</button>
             </div>
         </div>
     </div>
 
+    <!-- 2. RESUMEN KPI (5 TARJETAS) -->
+    <div class="row g-2 mb-4 row-cols-1 row-cols-md-5">
+        <!-- Faltantes Graves -->
+        <div class="col">
+            <div class="card border-0 shadow-sm h-100 border-start border-4 border-danger">
+                <div class="card-body py-2 px-2">
+                    <small class="text-muted text-uppercase fw-bold" style="font-size: 0.65rem;">Faltantes Graves (>1t)</small>
+                    <div class="fs-3 fw-bold text-danger">{{ resumen.faltantes_graves }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Faltantes Menores -->
+        <div class="col">
+            <div class="card border-0 shadow-sm h-100 border-start border-4" style="border-color: #f8d7da !important;">
+                <div class="card-body py-2 px-2">
+                    <small class="text-muted text-uppercase fw-bold" style="font-size: 0.65rem;">Faltantes Menores</small>
+                    <div class="fs-3 fw-bold" style="color: #dc3545;">{{ resumen.faltantes_menores }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Excedentes Graves -->
+        <div class="col">
+            <div class="card border-0 shadow-sm h-100 border-start border-4" style="border-color: #b8860b !important;">
+                <div class="card-body py-2 px-2">
+                    <small class="text-muted text-uppercase fw-bold" style="font-size: 0.65rem;">Excedentes Graves (>1t)</small>
+                    <div class="fs-3 fw-bold" style="color: #b8860b;">{{ resumen.excedentes_graves }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Excedentes Menores -->
+        <div class="col">
+            <div class="card border-0 shadow-sm h-100 border-start border-4" style="border-color: #ffeeba !important;">
+                <div class="card-body py-2 px-2">
+                    <small class="text-muted text-uppercase fw-bold" style="font-size: 0.65rem;">Excedentes Menores</small>
+                    <div class="fs-3 fw-bold" style="color: #856404;">{{ resumen.excedentes_menores }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SIN REPORTE (NUEVO) -->
+        <div class="col">
+            <div class="card border-0 shadow-sm h-100 border-start border-4 border-dark">
+                <div class="card-body py-2 px-2">
+                    <small class="text-muted text-uppercase fw-bold" style="font-size: 0.65rem;">Sin Reporte Ayer</small>
+                    <div class="fs-3 fw-bold text-dark">{{ resumen.sin_reporte }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. TABLA DE DATOS -->
     <div class="card shadow-sm border-0">
         <div class="card-body p-0">
             <div class="table-responsive rounded-top" style="max-height: 650px; overflow-y: auto;">
@@ -179,16 +189,12 @@
                             <th class="ubic oculto bg-light text-dark">Estado</th>
                             <th>ID&nbsp;CEDA</th>
                             <th>Nombre&nbsp;CEDA</th>
-                            
                             <th title="Días consecutivos reportados">Días</th>
                             <th class="bg-light text-dark border-start border-end">Último Reporte</th>
-                            
                             <th>DAP (Físico)</th>
                             <th>Validación DAP</th>
-
                             <th class="border-start">UREA (Físico)</th>
                             <th>Validación UREA</th>
-
                             <th class="confidencial oculto bg-confidencial">DAP<br>Sist.</th>
                             <th class="confidencial oculto bg-confidencial text-danger">Dif.<br>DAP</th>
                             <th class="confidencial oculto bg-confidencial">UREA<br>Sist.</th>
@@ -200,82 +206,61 @@
                         <tr>
                             <td class="ubic oculto text-muted small">{{ f.unidad_operativa }}</td>
                             <td class="ubic oculto text-muted small">{{ f.estado }}</td>
-
                             <td class="font-monospace text-muted small">{{ f.id_ceda_agricultura }}</td>
-                            <td class="text-truncate" style="max-width: 180px;" title="{{ f.nombre_cedas }}">
-                                {{ f.nombre_cedas }}
-                            </td>
-                            
+                            <td class="text-truncate" style="max-width: 180px;" title="{{ f.nombre_cedas }}">{{ f.nombre_cedas }}</td>
                             <td class="text-center fw-bold small">{{ f.dias_reportados }}</td>
-                            <td class="text-center border-start border-end" style="min-width: 90px;">
+                            
+                            <!-- COLUMNA ÚLTIMO REPORTE (CON SEMÁFORO DE GRAVEDAD) -->
+                            <td class="text-center border-start border-end" style="min-width: 110px;">
                                 <div class="d-flex justify-content-between align-items-center px-2">
                                     <span class="text-muted small me-2">{{ f.fecha_ultimo_reporte|date:"d/m" }}</span>
-                                    {% if f.reporto_ayer %}
-                                        <i class="bi bi-check-circle-fill text-success" title="Reportó correctamente"></i>
+                                    
+                                    {% if f.cumplimiento_status %}
+                                        <i class="bi bi-check-circle-fill text-success" title="Cumple (Reportó o Ceros)"></i>
                                     {% else %}
-                                        <span class="cumplimiento-fail" title="No reportó en el periodo esperado">
-                                            <i class="bi bi-x-lg"></i>
-                                        </span>
+                                        {% if f.dias_atraso > 5 %}
+                                            <span class="badge bg-danger text-white" title="Crítico: {{ f.dias_atraso }} días sin reporte">
+                                                {{ f.dias_atraso }} días
+                                            </span>
+                                        {% elif f.dias_atraso > 3 %}
+                                            <span class="badge text-white" style="background-color: #fd7e14;" title="Urgente: {{ f.dias_atraso }} días sin reporte">
+                                                {{ f.dias_atraso }} días
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-warning text-dark" title="Atención: {{ f.dias_atraso }} días sin reporte">
+                                                {{ f.dias_atraso }} días
+                                            </span>
+                                        {% endif %}
                                     {% endif %}
                                 </div>
                             </td>
                             
-                            <td class="text-end fw-bold">
-                                {{ f.inventario_dap_ultimo|default:0|formato_mx:3 }}
-                            </td>
+                            <td class="text-end fw-bold">{{ f.inventario_dap_ultimo|default:0|formato_mx:3 }}</td>
                             <td class="text-center bg-light">
-                                {% if f.dap_campo_vs_sigap < -1.0 %}
-                                    <span class="badge badge-faltante-grave rounded-pill w-100">FALTANTE GRAVE</span>
-                                {% elif f.dap_campo_vs_sigap < -0.01 %}
-                                    <span class="badge badge-faltante-menor rounded-pill w-100 text-truncate">Faltante Menor</span>
-                                {% elif f.dap_campo_vs_sigap > 1.0 %}
-                                    <span class="badge badge-excedente-grave rounded-pill w-100 text-truncate" title="Posible flete mal ubicado">Exc. Mayor</span>
-                                {% elif f.dap_campo_vs_sigap > 0.01 %}
-                                    <span class="badge badge-excedente-menor rounded-pill w-100 text-truncate">Exc. Menor</span>
-                                {% else %}
-                                    <span class="badge badge-ok"><i class="bi bi-check-lg"></i></span>
-                                {% endif %}
+                                {% if f.dap_campo_vs_sigap < -1.0 %}<span class="badge badge-faltante-grave rounded-pill w-100">FALTANTE GRAVE</span>
+                                {% elif f.dap_campo_vs_sigap < -0.01 %}<span class="badge badge-faltante-menor rounded-pill w-100 text-truncate">Faltante Menor</span>
+                                {% elif f.dap_campo_vs_sigap > 1.0 %}<span class="badge badge-excedente-grave rounded-pill w-100 text-truncate">Exc. Mayor</span>
+                                {% elif f.dap_campo_vs_sigap > 0.01 %}<span class="badge badge-excedente-menor rounded-pill w-100 text-truncate">Exc. Menor</span>
+                                {% else %}<span class="badge badge-ok"><i class="bi bi-check-lg"></i></span>{% endif %}
                             </td>
-
-                            <td class="text-end fw-bold border-start">
-                                {{ f.inventario_urea_ultimo|default:0|formato_mx:3 }}
-                            </td>
+                            <td class="text-end fw-bold border-start">{{ f.inventario_urea_ultimo|default:0|formato_mx:3 }}</td>
                             <td class="text-center bg-light">
-                                {% if f.urea_campo_vs_sigap < -1.0 %}
-                                    <span class="badge badge-faltante-grave rounded-pill w-100">FALTANTE GRAVE</span>
-                                {% elif f.urea_campo_vs_sigap < -0.01 %}
-                                    <span class="badge badge-faltante-menor rounded-pill w-100 text-truncate">Faltante Menor</span>
-                                {% elif f.urea_campo_vs_sigap > 1.0 %}
-                                    <span class="badge badge-excedente-grave rounded-pill w-100 text-truncate" title="Posible flete mal ubicado">Exc. Mayor</span>
-                                {% elif f.urea_campo_vs_sigap > 0.01 %}
-                                    <span class="badge badge-excedente-menor rounded-pill w-100 text-truncate">Exc. Menor</span>
-                                {% else %}
-                                    <span class="badge badge-ok"><i class="bi bi-check-lg"></i></span>
-                                {% endif %}
+                                {% if f.urea_campo_vs_sigap < -1.0 %}<span class="badge badge-faltante-grave rounded-pill w-100">FALTANTE GRAVE</span>
+                                {% elif f.urea_campo_vs_sigap < -0.01 %}<span class="badge badge-faltante-menor rounded-pill w-100 text-truncate">Faltante Menor</span>
+                                {% elif f.urea_campo_vs_sigap > 1.0 %}<span class="badge badge-excedente-grave rounded-pill w-100 text-truncate">Exc. Mayor</span>
+                                {% elif f.urea_campo_vs_sigap > 0.01 %}<span class="badge badge-excedente-menor rounded-pill w-100 text-truncate">Exc. Menor</span>
+                                {% else %}<span class="badge badge-ok"><i class="bi bi-check-lg"></i></span>{% endif %}
                             </td>
-
-                            <td class="confidencial oculto text-end bg-confidencial small">
-                                {{ f.dap_sigap|default:0|formato_mx:3 }}
-                            </td>
+                            <td class="confidencial oculto text-end bg-confidencial small">{{ f.dap_sigap|default:0|formato_mx:3 }}</td>
                             <td class="confidencial oculto text-end small fw-bold bg-confidencial">
-                                {% if f.dap_campo_vs_sigap < -0.01 %}
-                                    <span class="txt-faltante">{{ f.dap_campo_vs_sigap|formato_mx:3 }}</span>
-                                {% elif f.dap_campo_vs_sigap > 0.01 %}
-                                    <span class="txt-excedente">{{ f.dap_campo_vs_sigap|formato_mx:3 }}</span>
-                                {% endif %}
+                                {% if f.dap_campo_vs_sigap < -0.01 %}<span class="txt-faltante">{{ f.dap_campo_vs_sigap|formato_mx:3 }}</span>
+                                {% elif f.dap_campo_vs_sigap > 0.01 %}<span class="txt-excedente">{{ f.dap_campo_vs_sigap|formato_mx:3 }}</span>{% endif %}
                             </td>
-                            
-                            <td class="confidencial oculto text-end bg-confidencial small">
-                                {{ f.urea_sigap|default:0|formato_mx:3 }}
-                            </td>
+                            <td class="confidencial oculto text-end bg-confidencial small">{{ f.urea_sigap|default:0|formato_mx:3 }}</td>
                             <td class="confidencial oculto text-end small fw-bold bg-confidencial">
-                                {% if f.urea_campo_vs_sigap < -0.01 %}
-                                    <span class="txt-faltante">{{ f.urea_campo_vs_sigap|formato_mx:3 }}</span>
-                                {% elif f.urea_campo_vs_sigap > 0.01 %}
-                                    <span class="txt-excedente">{{ f.urea_campo_vs_sigap|formato_mx:3 }}</span>
-                                {% endif %}
+                                {% if f.urea_campo_vs_sigap < -0.01 %}<span class="txt-faltante">{{ f.urea_campo_vs_sigap|formato_mx:3 }}</span>
+                                {% elif f.urea_campo_vs_sigap > 0.01 %}<span class="txt-excedente">{{ f.urea_campo_vs_sigap|formato_mx:3 }}</span>{% endif %}
                             </td>
-
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -286,7 +271,7 @@
             <div class="d-flex gap-3">
                 <span><i class="bi bi-square-fill text-danger me-1"></i> Faltante > 1t (Grave)</span>
                 <span><i class="bi bi-square-fill me-1" style="color: #b8860b;"></i> Excedente > 1t (Mayor)</span>
-                <span><i class="bi bi-x-lg me-1 text-danger fw-bold"></i> Sin reporte ayer</span>
+                <span><span class="badge bg-danger" style="font-size: 0.6rem;">X días</span> Sin reporte</span>
             </div>
             <span>{{ datos|length }} registros</span>
         </div>
@@ -295,21 +280,65 @@
 
 </div>
 
+<!-- TABLA OCULTA PARA EXPORTACIÓN -->
+<div id="contenedor-tabla-oculta">
+    <table id="tabla-exportar">
+        <thead>
+            <tr>
+                <th>Unidad Operativa</th>
+                <th>Estado</th>
+                <th>ID CEDA</th>
+                <th>Nombre CEDA</th>
+                <th>Días Reportados</th>
+                <th>Fecha Último Reporte</th>
+                <th>Cumplimiento Reporte</th>
+                <th>Días Atraso</th>
+                <th>DAP Físico</th>
+                <th>DAP Sistema</th>
+                <th>Diferencia DAP</th>
+                <th>UREA Físico</th>
+                <th>UREA Sistema</th>
+                <th>Diferencia UREA</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for f in datos %}
+            <tr>
+                <td>{{ f.unidad_operativa }}</td>
+                <td>{{ f.estado }}</td>
+                <td>{{ f.id_ceda_agricultura }}</td>
+                <td>{{ f.nombre_cedas }}</td>
+                <td>{{ f.dias_reportados }}</td>
+                <td>{{ f.fecha_ultimo_reporte|date:"d/m/Y" }}</td>
+                <td>{{ f.cumplimiento_status|yesno:"CUMPLE,NO CUMPLE" }}</td>
+                <td>{{ f.dias_atraso }}</td>
+                <td>{{ f.inventario_dap_ultimo|formato_mx:3 }}</td>
+                <td>{{ f.dap_sigap|formato_mx:3 }}</td>
+                <td>{{ f.dap_campo_vs_sigap|formato_mx:3 }}</td>
+                <td>{{ f.inventario_urea_ultimo|formato_mx:3 }}</td>
+                <td>{{ f.urea_sigap|formato_mx:3 }}</td>
+                <td>{{ f.urea_campo_vs_sigap|formato_mx:3 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    
-    // --- 1. Filtros Dinámicos ---
+    // Filtros Dinámicos
     const unidadSelect = document.getElementById("unidad_operativa");
     const estadoSelect = document.getElementById("estado");
     const zonaSelect = document.getElementById("zona_operativa");
     const urlFiltros = "{% url 'ajax_filtros_generales' %}";
     const tablaRef = "estadisticas_inventarios_campo"; 
     
-    const estadoPre = "{{ request.GET.estado|default:'' }}";
-    const zonaPre = "{{ request.GET.zona_operativa|default:'' }}";
+    // Recuperar valores previos (si existen)
+    const estadoPre = "{{ estado_seleccionado|default:'' }}";
+    const zonaPre = "{{ zona_seleccionada|default:'' }}";
 
     function cargarDependientes() {
         const u = unidadSelect.value;
@@ -339,13 +368,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     if(unidadSelect) {
-        unidadSelect.addEventListener('change', () => { estadoSelect.value = ""; cargarDependientes(); });
+        unidadSelect.addEventListener('change', () => { 
+            estadoSelect.value = ""; 
+            zonaSelect.innerHTML = '<option value="">-- Todos --</option>';
+            cargarDependientes(); 
+        });
         estadoSelect.addEventListener('change', cargarDependientes);
         cargarDependientes();
     }
 
-    // --- 2. Toggles ---
-    
+    // Toggles
     const btnUbic = document.getElementById("toggle-ubicacion");
     if(btnUbic){
         btnUbic.addEventListener('click', () => {
@@ -371,34 +403,32 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-
 });
 
-// --- 3. Descarga CSV ---
 function descargarCSV() {
-    const tabla = document.getElementById("tabla-estadisticas");
-    if (!tabla) { alert("No hay datos."); return; }
-
-    let csv = [];
-    const filas = tabla.querySelectorAll("tr");
+    const tabla = document.getElementById("tabla-exportar");
+    let filas = Array.from(tabla.querySelectorAll("tr"));
     
-    for (let i = 0; i < filas.length; i++) {
-        let fila = [];
-        const cols = filas[i].querySelectorAll("th, td");
-        
-        for (let j = 0; j < cols.length; j++) {
-            let data = cols[j].textContent.replace(/(\r\n|\n|\r)/gm, " ").replace(/\s+/g, " ").trim();
-            data = data.replace(/"/g, '""');
-            fila.push('"' + data + '"');
-        }
-        csv.push(fila.join(","));
-    }
+    let csvContent = filas.map(fila => {
+        let celdas = Array.from(fila.querySelectorAll("th, td"));
+        return celdas.map(celda => {
+            let texto = celda.textContent.replace(/(\r\n|\n|\r)/gm, " ").trim();
+            if (texto.includes(",")) {
+                return `"${texto}"`;
+            }
+            return texto;
+        }).join(","); 
+    }).join("\n"); 
 
-    const csvFile = new Blob(["\uFEFF" + csv.join("\n")], {type: "text/csv;charset=utf-8;"});
+    const bom = "\uFEFF"; 
+    const blob = new Blob([bom + csvContent], { type: "text/csv;charset=utf-8;" });
+    
     const link = document.createElement("a");
-    link.href = window.URL.createObjectURL(csvFile);
-    link.download = "Auditoria_Inventarios_Campo.csv";
-    link.style.display = "none";
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", "Auditoria_Inventarios_Campo.csv");
+    link.style.visibility = 'hidden';
+    
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
