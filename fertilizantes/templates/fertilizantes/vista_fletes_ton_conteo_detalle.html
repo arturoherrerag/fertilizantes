@@ -6,7 +6,7 @@
 {% block content %}
 
 <style>
-    /* --- Estilos Institucionales (Para la tabla visible) --- */
+    /* --- Estilos Institucionales --- */
     .tabla-header-institucional th {
         background-color: #264e46 !important;
         color: #ffffff !important;
@@ -23,15 +23,33 @@
         color: #161a1d;
     }
 
-    /* --- TRUCO PARA LA TABLA DE EXPORTACIÓN --- */
-    /* La ocultamos visualmente pero la dejamos "renderizada" para el DOM */
-    #contenedor-tabla-oculta {
-        height: 0px;
-        width: 0px;
-        overflow: hidden;
-        position: absolute;
-        left: -9999px;
+    /* --- FORMATO CONDICIONAL MEJORADO --- */
+    
+    /* Ceros: Guion sutil */
+    .valor-cero {
+        color: #dee2e6 !important; /* Gris muy claro */
+        font-weight: 300;
+        text-align: center;
     }
+
+    /* Valores > 0: Fondo destacado (Beige Institucional Suave) */
+    .valor-destacado {
+        background-color: #fff8e1 !important; /* Fondo crema/amarillo muy suave */
+        color: #a57f2c !important; /* Dorado Institucional Oscuro */
+        font-weight: 700;
+        border: 1px solid #f0e6c8; /* Borde sutil para definir la celda */
+    }
+    
+    /* Alternativa Verde (si prefieres verde):
+    .valor-destacado {
+        background-color: #e8f5e9 !important; 
+        color: #1b5e20 !important;
+        font-weight: 700;
+    }
+    */
+
+    /* Tabla Oculta */
+    #contenedor-tabla-oculta { height: 0px; width: 0px; overflow: hidden; position: absolute; left: -9999px; }
 </style>
 
 <div class="container mt-4 mb-5">
@@ -55,15 +73,16 @@
         </div>
     </div>
 
+    <!-- FILTROS -->
     <div class="card shadow-sm border-0 mb-4 bg-light">
         <div class="card-body p-4">
-            <h6 class="card-title fw-bold text-secondary mb-3">
+            <h6 class="fw-bold text-secondary mb-3">
                 <i class="bi bi-funnel me-1"></i> Filtros de Búsqueda
             </h6>
             <form method="get" class="row g-3 align-items-end" id="filtros-form">
                 <div class="col-md-3">
-                    <label for="unidad_operativa" class="form-label small text-muted text-uppercase fw-bold">Unidad Operativa</label>
-                    <select name="unidad_operativa" id="unidad_operativa" class="form-select border-0 shadow-sm">
+                    <label class="form-label-custom">Unidad Operativa</label>
+                    <select name="unidad_operativa" id="unidad_operativa" class="form-select input-custom">
                         <option value="">-- Todas --</option>
                         {% for u in unidades %}
                             <option value="{{ u }}" {% if u == unidad_seleccionada %}selected{% endif %}>{{ u }}</option>
@@ -71,35 +90,89 @@
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label for="estado" class="form-label small text-muted text-uppercase fw-bold">Estado</label>
-                    <select name="estado" id="estado" class="form-select border-0 shadow-sm">
+                    <label class="form-label-custom">Estado</label>
+                    <select name="estado" id="estado" class="form-select input-custom">
                         <option value="">-- Todos --</option>
                         {% for e in estados %}
                             <option value="{{ e }}" {% if e == estado_seleccionado %}selected{% endif %}>{{ e }}</option>
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-md-3">
-                    <label for="estado_procedencia" class="form-label small text-muted text-uppercase fw-bold">Procedencia</label>
-                    <select name="estado_procedencia" id="estado_procedencia" class="form-select border-0 shadow-sm">
+                <div class="col-md-2">
+                    <label class="form-label-custom">Procedencia</label>
+                    <select name="estado_procedencia" id="estado_procedencia" class="form-select input-custom">
                         <option value="">-- Todos --</option>
                         {% for p in procedencias %}
                             <option value="{{ p }}" {% if p == procedencia_seleccionada %}selected{% endif %}>{{ p }}</option>
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-md-3">
-                    <button type="submit" class="btn text-white w-100 shadow-sm" style="background-color: #264e46;">
-                        <i class="bi bi-search me-2"></i>Aplicar Filtros
+                <div class="col-md-2">
+                    <label class="form-label-custom">ID CEDA</label>
+                    <input type="text" name="id_ceda_agricultura" class="form-control input-custom" 
+                           value="{{ ceda_seleccionada }}" placeholder="Ej. CTT-3930">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100 shadow-sm" style="background-color: #264e46; border-color: #264e46;">
+                        <i class="bi bi-search me-2"></i>Consultar
                     </button>
                 </div>
-                {% if buscar_ceda %}
-                <input type="hidden" name="buscar_ceda" value="{{ buscar_ceda }}">
-                {% endif %}
             </form>
         </div>
     </div>
 
+    {% if mensaje %}
+        <div class="alert alert-info shadow-sm border-0 mb-4">
+            <i class="bi bi-info-circle-fill me-2"></i>{{ mensaje }}
+        </div>
+    {% endif %}
+
+    {% if resumen_distribucion %}
+    <!-- RESUMEN KPI -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-white border-bottom pt-3 pb-2">
+            <h6 class="fw-bold text-secondary mb-0">
+                <i class="bi bi-bar-chart-line me-2"></i>Distribución de Fletes por Capacidad
+            </h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-borderless mb-0 text-center align-middle">
+                    <thead class="text-muted small text-uppercase" style="font-size: 0.75rem; letter-spacing: 1px;">
+                        <tr>
+                            <th class="py-3 text-start ps-4">Capacidad (Ton)</th>
+                            <th class="border-start">Fletes DAP</th>
+                            <th>Fletes UREA</th>
+                            <th class="border-start bg-light fw-bold text-dark">Total Fletes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ton, counts in resumen_distribucion %}
+                        <tr class="border-top">
+                            <td class="text-start ps-4 fw-bold text-dark">{{ ton }} t</td>
+                            
+                            <td class="border-start {% if counts.DAP > 0 %}valor-destacado{% else %}valor-cero{% endif %}">
+                                {% if counts.DAP == 0 %}-{% else %}{{ counts.DAP|formato_mx }}{% endif %}
+                            </td>
+                            
+                            <td class="{% if counts.UREA > 0 %}valor-destacado{% else %}valor-cero{% endif %}">
+                                {% if counts.UREA == 0 %}-{% else %}{{ counts.UREA|formato_mx }}{% endif %}
+                            </td>
+                            
+                            <td class="border-start bg-light fw-bold text-dark fs-6">
+                                {{ counts.Total|formato_mx }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if datos %}
+    <!-- TABLA PRINCIPAL -->
     <div class="card shadow-sm border-0">
         <div class="card-body p-0">
             <div class="table-responsive rounded-top">
@@ -130,21 +203,17 @@
                             <td class="text-center text-secondary">
                                 {{ fila.estado_procedencia }}
                             </td>
-                            <td class="text-center dato-numero text-dark">
+                            <td class="text-center dato-numero text-dark fw-bold">
                                 {{ fila.toneladas_iniciales|formato_mx:3 }}
                             </td>
-                            <td class="text-center dato-numero text-secondary">
-                                {{ fila.cantidad_fletes_dap|formato_mx }}
+                            
+                            <!-- Celdas con formato condicional -->
+                            <td class="text-center dato-numero {% if fila.cantidad_fletes_dap > 0 %}valor-destacado{% else %}valor-cero{% endif %}">
+                                {% if fila.cantidad_fletes_dap == 0 %}-{% else %}{{ fila.cantidad_fletes_dap|formato_mx }}{% endif %}
                             </td>
-                            <td class="text-center dato-numero text-secondary">
-                                {{ fila.cantidad_fletes_urea|formato_mx }}
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="6" class="text-center py-5 text-muted">
-                                <i class="bi bi-inbox fs-1 d-block mb-2"></i>
-                                No se encontraron registros con los filtros seleccionados.
+                            
+                            <td class="text-center dato-numero {% if fila.cantidad_fletes_urea > 0 %}valor-destacado{% else %}valor-cero{% endif %}">
+                                {% if fila.cantidad_fletes_urea == 0 %}-{% else %}{{ fila.cantidad_fletes_urea|formato_mx }}{% endif %}
                             </td>
                         </tr>
                         {% endfor %}
@@ -152,16 +221,15 @@
                 </table>
             </div>
         </div>
+        <div class="card-footer bg-white py-2 small text-muted text-end">
+            Mostrando {{ datos|length }} registros.
+        </div>
     </div>
-    
-    <div class="mt-3 text-end">
-        <small class="text-muted fst-italic">
-            * Se muestran columnas combinadas. Al descargar el CSV obtendrá las columnas separadas.
-        </small>
-    </div>
+    {% endif %}
 
 </div>
 
+<!-- TABLA OCULTA PARA EXPORTACIÓN -->
 <div id="contenedor-tabla-oculta">
     <table id="tabla-exportar">
         <thead>
@@ -200,18 +268,18 @@
 {% block extra_js %}
 <script>
     function descargarCSV() {
-        // Seleccionamos la tabla OCULTA
         const tabla = document.getElementById("tabla-exportar");
+        if (!tabla || tabla.rows.length <= 1) {
+            alert("No hay datos para exportar. Aplica filtros primero.");
+            return;
+        }
+
         let filas = Array.from(tabla.querySelectorAll("tr"));
         
         let csvContent = filas.map(fila => {
             let celdas = Array.from(fila.querySelectorAll("th, td"));
             return celdas.map(celda => {
-                // CAMBIO CRUCIAL: Usamos .textContent en lugar de .innerText
-                // textContent lee el texto aunque el elemento esté oculto
                 let texto = celda.textContent.replace(/(\r\n|\n|\r)/gm, " ").trim();
-                
-                // Si el dato tiene comas, lo encerramos entre comillas
                 if (texto.includes(",")) {
                     return `"${texto}"`;
                 }
@@ -219,7 +287,6 @@
             }).join(","); 
         }).join("\n"); 
 
-        // BOM para que Excel reconozca acentos
         const bom = "\uFEFF"; 
         const blob = new Blob([bom + csvContent], { type: "text/csv;charset=utf-8;" });
         

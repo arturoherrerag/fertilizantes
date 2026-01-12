@@ -1,5 +1,6 @@
 {% extends 'fertilizantes/base.html' %}
 {% load formatos %}
+{% load static %}
 
 {% block title %}CEDAs con Inventario Negativo de Remanente{% endblock %}
 
@@ -31,6 +32,15 @@
         text-align: center;
         display: block;
     }
+
+    /* Tabla oculta para exportación */
+    #contenedor-tabla-oculta {
+        height: 0px;
+        width: 0px;
+        overflow: hidden;
+        position: absolute;
+        left: -9999px;
+    }
 </style>
 
 <div class="container mt-4 mb-5">
@@ -44,9 +54,14 @@
                 CEDAs que presentan inventario físico remanente menor a cero.
             </p>
         </div>
-        <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
-            <i class="bi bi-printer me-1"></i> Imprimir
-        </button>
+        <div class="btn-group">
+            <button class="btn btn-success btn-sm text-white" onclick="descargarCSV()">
+                <i class="bi bi-file-earmark-excel me-1"></i> Descargar CSV
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+                <i class="bi bi-printer me-1"></i> Imprimir
+            </button>
+        </div>
     </div>
 
     <div class="card shadow-sm border-0 mb-4 bg-light">
@@ -90,6 +105,46 @@
             </form>
         </div>
     </div>
+
+    {% if datos %}
+    <!-- RESUMEN KPI (NUEVO) -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-white border-bottom pt-3 pb-2">
+            <h6 class="fw-bold text-danger mb-0">
+                <i class="bi bi-exclamation-triangle me-2"></i>Resumen de Afectación
+            </h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-borderless mb-0 text-center align-middle">
+                    <thead class="text-muted small text-uppercase" style="font-size: 0.75rem; letter-spacing: 1px;">
+                        <tr>
+                            <th class="py-3">CEDAs Afectados</th>
+                            <th class="border-start">Total Negativo DAP</th>
+                            <th>Total Negativo UREA</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="pb-3">
+                                <span class="display-6 fw-bold text-dark">{{ resumen.total_cedas|formato_mx }}</span>
+                                <small class="d-block text-muted">Centros</small>
+                            </td>
+                            <td class="pb-3 border-start">
+                                <span class="fs-4 fw-bold text-danger">{{ resumen.suma_negativos_dap|formato_mx:3 }}</span>
+                                <small class="d-block text-muted">Toneladas</small>
+                            </td>
+                            <td class="pb-3">
+                                <span class="fs-4 fw-bold text-danger">{{ resumen.suma_negativos_urea|formato_mx:3 }}</span>
+                                <small class="d-block text-muted">Toneladas</small>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     <div class="card shadow-sm border-0">
         <div class="card-body p-0">
@@ -155,9 +210,40 @@
     </div>
 </div>
 
+<!-- TABLA OCULTA PARA EXPORTACIÓN -->
+<div id="contenedor-tabla-oculta">
+    <table id="tabla-exportar">
+        <thead>
+            <tr>
+                <th>Unidad Operativa</th>
+                <th>Estado</th>
+                <th>Zona Operativa</th>
+                <th>ID CEDA</th>
+                <th>Nombre CEDA</th>
+                <th>Remanente Negativo DAP</th>
+                <th>Remanente Negativo UREA</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for fila in datos %}
+            <tr>
+                <td>{{ fila.coordinacion_estatal }}</td>
+                <td>{{ fila.estado }}</td>
+                <td>{{ fila.zona_operativa }}</td>
+                <td>{{ fila.id_ceda_agricultura }}</td>
+                <td>{{ fila.nombre_cedas }}</td>
+                <td>{{ fila.dap_ton_remanente_inventario|formato_mx:3 }}</td>
+                <td>{{ fila.urea_ton_remanente_inventario|formato_mx:3 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'js/filtros_dependientes.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const urlFiltros = "{% url 'ajax_filtros_generales' %}";
@@ -201,5 +287,34 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+function descargarCSV() {
+    const tabla = document.getElementById("tabla-exportar");
+    let filas = Array.from(tabla.querySelectorAll("tr"));
+    
+    let csvContent = filas.map(fila => {
+        let celdas = Array.from(fila.querySelectorAll("th, td"));
+        return celdas.map(celda => {
+            let texto = celda.textContent.replace(/(\r\n|\n|\r)/gm, " ").trim();
+            if (texto.includes(",")) {
+                return `"${texto}"`;
+            }
+            return texto;
+        }).join(","); 
+    }).join("\n"); 
+
+    const bom = "\uFEFF"; 
+    const blob = new Blob([bom + csvContent], { type: "text/csv;charset=utf-8;" });
+    
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", "CEDAs_Remanentes_Negativos.csv");
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
 </script>
 {% endblock %}

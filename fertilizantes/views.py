@@ -719,39 +719,77 @@ def ajax_filtros_generales(request):
 
 @login_required
 def vista_inventarios_negativos_x_dia(request):
+    # 1. Configuración dinámica
     tabla, conn, es_django = get_table_and_conn(request, "inventarios_negativos_x_ceda_diario_2025")
     
-    u, e = request.GET.get('unidad_operativa'), request.GET.get('estado')
+    # 2. Parámetros GET
+    u = request.GET.get('unidad_operativa')
+    e = request.GET.get('estado')
+    
+    # 3. Construir WHERE
     cond, params = [], []
     if u: cond.append("coordinacion_estatal = %s"); params.append(u)
     if e: cond.append("estado = %s"); params.append(e)
     where = (" AND " + " AND ".join(cond)) if cond else ""
 
     datos = []
+    unidades, estados = [], []
+    resumen = {'total_registros': 0, 'suma_negativos_dap': 0, 'suma_negativos_urea': 0}
+
     try:
         with conn.cursor() as cursor:
+            # A) Consulta Principal
             cursor.execute(f"""
                 SELECT fecha, coordinacion_estatal AS unidad_operativa, estado, zona_operativa, 
                        id_ceda_agricultura, nombre_cedas, dap_ton_total_entrada, urea_ton_total_entrada,
                        dap_ton_total_salida, urea_ton_total_salida, 
                        dap_ton_inventario_acumulado AS dap_inventario, 
-                       urea_ton_inventario_acumulado AS urea_inventario
+                       urea_ton_inventario_acumulado AS urea_inventario,
+                       dap_ton_flete_entrada, dap_ton_transfer_entrada, dap_ton_remanente_entrada,
+                       urea_ton_flete_entrada, urea_ton_transfer_entrada, urea_ton_remanente_entrada,
+                       dap_ton_entrega_salida, dap_ton_transfer_salida, dap_ton_incidentes_salida,
+                       urea_ton_entrega_salida, urea_ton_transfer_salida, urea_ton_incidentes_salida
                 FROM {tabla} WHERE fecha <= CURRENT_DATE {where}
                 ORDER BY unidad_operativa, estado, nombre_cedas, fecha DESC
             """, params)
-            if es_django: cols = [col[0] for col in cursor.description]
-            else: cols = [col.name if hasattr(col, 'name') else col[0] for col in cursor.description]
+            
+            if es_django:
+                cols = [col[0] for col in cursor.description]
+            else:
+                cols = [col.name if hasattr(col, 'name') else col[0] for col in cursor.description]
+            
             datos = [dict(zip(cols, f)) for f in cursor.fetchall()]
-    except Exception: pass
-    finally:
-        if not es_django and conn: conn.close()
+            
+            # B) Filtros Dinámicos (usando la misma conexión y tabla)
+            # Nota: Aquí usamos 'coordinacion_estatal' porque así se llama en esta vista específica
+            cursor.execute(f"SELECT DISTINCT coordinacion_estatal FROM {tabla} ORDER BY 1")
+            unidades = [r[0] for r in cursor.fetchall() if r[0]]
+            cursor.execute(f"SELECT DISTINCT estado FROM {tabla} ORDER BY 1")
+            estados = [r[0] for r in cursor.fetchall() if r[0]]
 
-    unidades = sorted(list(set(d['unidad_operativa'] for d in datos))) if datos else []
-    estados = sorted(list(set(d['estado'] for d in datos))) if datos else []
-    
+            # C) Calcular Resumen
+            if datos:
+                resumen['total_registros'] = len(datos)
+                # Sumamos solo los valores negativos
+                resumen['suma_negativos_dap'] = sum((d.get('dap_inventario') or 0) for d in datos if (d.get('dap_inventario') or 0) < 0)
+                resumen['suma_negativos_urea'] = sum((d.get('urea_inventario') or 0) for d in datos if (d.get('urea_inventario') or 0) < 0)
+
+    except Exception as err:
+        print(f"Error en vista_inventarios_negativos_x_dia: {err}")
+
+    finally:
+        if not es_django and conn:
+            conn.close()
+
     return render(request, 'fertilizantes/vista_inventarios_negativos_x_dia.html', {
-        'datos': datos, 'unidades': unidades, 'estados': estados, 'unidad_seleccionada': u, 'estado_seleccionado': e
+        'datos': datos, 
+        'unidades': unidades, 
+        'estados': estados, 
+        'resumen': resumen, # Pasamos el resumen al template
+        'unidad_seleccionada': u, 
+        'estado_seleccionado': e
     })
+
 
 
 @login_required
@@ -824,88 +862,190 @@ def vista_inventarios_negativos_actuales(request):
 
 @login_required
 def vista_resumen_remanente_estado(request):
+    # 1. Configuración dinámica
     tabla, conn, es_django = get_table_and_conn(request, "resumen_remanente_estado_2025")
+    
     datos = []
+    # Inicializamos con flotantes para evitar errores de tipo
+    resumen = {
+        'total_entrada_dap': 0.0, 'total_entrada_urea': 0.0,
+        'total_salida_dap': 0.0, 'total_salida_urea': 0.0,
+        'total_inventario_dap': 0.0, 'total_inventario_urea': 0.0,
+        'total_entrada_global': 0.0, 'total_salida_global': 0.0, 'total_inventario_global': 0.0
+    }
+
     try:
         with conn.cursor() as cursor:
             cursor.execute(f"SELECT * FROM {tabla}")
-            if es_django: cols = [col[0] for col in cursor.description]
-            else: cols = [col.name if hasattr(col, 'name') else col[0] for col in cursor.description]
+            
+            if es_django:
+                cols = [col[0] for col in cursor.description]
+            else:
+                cols = [col.name if hasattr(col, 'name') else col[0] for col in cursor.description]
+            
             datos = [dict(zip(cols, f)) for f in cursor.fetchall()]
-    except Exception: pass
+            
+            # Calcular Resumen
+            if datos:
+                # Sumas verticales
+                resumen['total_entrada_dap'] = sum(float(d.get('dap_remanente_entrada') or 0) for d in datos)
+                resumen['total_entrada_urea'] = sum(float(d.get('urea_remanente_entrada') or 0) for d in datos)
+                
+                resumen['total_salida_dap'] = sum(float(d.get('dap_remanente_salida') or 0) for d in datos)
+                resumen['total_salida_urea'] = sum(float(d.get('urea_remanente_salida') or 0) for d in datos)
+                
+                resumen['total_inventario_dap'] = sum(float(d.get('dap_remanente_inventario') or 0) for d in datos)
+                resumen['total_inventario_urea'] = sum(float(d.get('urea_remanente_inventario') or 0) for d in datos)
+                
+                # Sumas horizontales (Totales Globales)
+                resumen['total_entrada_global'] = resumen['total_entrada_dap'] + resumen['total_entrada_urea']
+                resumen['total_salida_global'] = resumen['total_salida_dap'] + resumen['total_salida_urea']
+                resumen['total_inventario_global'] = resumen['total_inventario_dap'] + resumen['total_inventario_urea']
+
+    except Exception as err:
+        print(f"Error en vista_resumen_remanente_estado: {err}")
+
     finally:
-        if not es_django and conn: conn.close()
-    return render(request, 'fertilizantes/vista_resumen_remanente_estado.html', {'datos': datos})
+        if not es_django and conn:
+            conn.close()
+
+    return render(request, 'fertilizantes/vista_resumen_remanente_estado.html', {
+        'datos': datos, 
+        'resumen': resumen
+    })
 
 
 @login_required
 def vista_cedas_con_remanentes(request):
+    # 1. Configuración dinámica
     tabla, conn, es_django = get_table_and_conn(request, "cedas_con_remanentes_2025")
     
+    # 2. Parámetros GET
     u = request.GET.get('unidad_operativa')
     e = request.GET.get('estado')
+    z = request.GET.get('zona_operativa')
+    
+    # 3. Construir WHERE
     cond, params = [], []
     if u: cond.append("coordinacion_estatal = %s"); params.append(u)
     if e: cond.append("estado = %s"); params.append(e)
+    if z: cond.append("zona_operativa = %s"); params.append(z)
     where = f"WHERE {' AND '.join(cond)}" if cond else ""
 
-    datos, unidades, estados, zonas = [], [], [], []
+    datos = []
+    unidades, estados, zonas = [], [], []
+    resumen = {'total_cedas': 0, 'total_dap': 0.0, 'total_urea': 0.0, 'total_ton': 0.0}
+
     try:
         with conn.cursor() as cursor:
+            # A) Consulta Principal
             cursor.execute(f"SELECT * FROM {tabla} {where} ORDER BY coordinacion_estatal, estado", params)
-            if es_django: cols = [col[0] for col in cursor.description]
-            else: cols = [col.name if hasattr(col, 'name') else col[0] for col in cursor.description]
+            
+            if es_django:
+                cols = [col[0] for col in cursor.description]
+            else:
+                cols = [col.name if hasattr(col, 'name') else col[0] for col in cursor.description]
+            
             datos = [dict(zip(cols, f)) for f in cursor.fetchall()]
             
+            # B) Filtros Dinámicos
             cursor.execute(f"SELECT DISTINCT coordinacion_estatal FROM {tabla} ORDER BY 1")
             unidades = [r[0] for r in cursor.fetchall() if r[0]]
             cursor.execute(f"SELECT DISTINCT estado FROM {tabla} ORDER BY 1")
             estados = [r[0] for r in cursor.fetchall() if r[0]]
             cursor.execute(f"SELECT DISTINCT zona_operativa FROM {tabla} ORDER BY 1")
             zonas = [r[0] for r in cursor.fetchall() if r[0]]
-    except Exception: pass
-    finally:
-        if not es_django and conn: conn.close()
 
-    total_ton = sum((d.get('dap_ton_remanente_inventario') or 0) + (d.get('urea_ton_remanente_inventario') or 0) for d in datos)
+            # C) Calcular Resumen
+            if datos:
+                resumen['total_cedas'] = len(datos)
+                resumen['total_dap'] = sum(float(d.get('dap_ton_remanente_inventario') or 0) for d in datos)
+                resumen['total_urea'] = sum(float(d.get('urea_ton_remanente_inventario') or 0) for d in datos)
+                resumen['total_ton'] = resumen['total_dap'] + resumen['total_urea']
+
+    except Exception as err:
+        print(f"Error en vista_cedas_con_remanentes: {err}")
+
+    finally:
+        if not es_django and conn:
+            conn.close()
+
     return render(request, 'fertilizantes/vista_cedas_con_remanentes.html', {
-        'datos': datos, 'unidades': unidades, 'estados': estados, 'zonas': zonas,
-        'resumen': {'total_cedas': len(datos), 'total_ton': total_ton},
-        'unidad_seleccionada': u, 'estado_seleccionado': e
+        'datos': datos, 
+        'unidades': unidades, 
+        'estados': estados, 
+        'zonas': zonas,
+        'resumen': resumen,
+        'unidad_seleccionada': u, 
+        'estado_seleccionado': e, 
+        'zona_seleccionada': z
     })
 
 
 @login_required
 def vista_cedas_con_remanentes_negativos(request):
+    # 1. Configuración dinámica
     tabla, conn, es_django = get_table_and_conn(request, "cedas_con_remanentes_negativos_2025")
     
+    # 2. Parámetros GET
     u = request.GET.get('unidad_operativa')
     e = request.GET.get('estado')
+    z = request.GET.get('zona_operativa')
+    
+    # 3. Construir WHERE
     cond, params = [], []
     if u: cond.append("coordinacion_estatal = %s"); params.append(u)
     if e: cond.append("estado = %s"); params.append(e)
+    if z: cond.append("zona_operativa = %s"); params.append(z)
     where = f"WHERE {' AND '.join(cond)}" if cond else ""
 
-    datos, unidades, estados, zonas = [], [], [], []
+    datos = []
+    unidades, estados, zonas = [], [], []
+    resumen = {'total_cedas': 0, 'suma_negativos_dap': 0.0, 'suma_negativos_urea': 0.0}
+
     try:
         with conn.cursor() as cursor:
+            # A) Consulta Principal
             cursor.execute(f"SELECT * FROM {tabla} {where} ORDER BY coordinacion_estatal", params)
-            if es_django: cols = [col[0] for col in cursor.description]
-            else: cols = [col.name if hasattr(col, 'name') else col[0] for col in cursor.description]
+            
+            if es_django:
+                cols = [col[0] for col in cursor.description]
+            else:
+                cols = [col.name if hasattr(col, 'name') else col[0] for col in cursor.description]
+            
             datos = [dict(zip(cols, f)) for f in cursor.fetchall()]
             
+            # B) Filtros Dinámicos
             cursor.execute(f"SELECT DISTINCT coordinacion_estatal FROM {tabla} ORDER BY 1")
             unidades = [r[0] for r in cursor.fetchall() if r[0]]
             cursor.execute(f"SELECT DISTINCT estado FROM {tabla} ORDER BY 1")
             estados = [r[0] for r in cursor.fetchall() if r[0]]
             cursor.execute(f"SELECT DISTINCT zona_operativa FROM {tabla} ORDER BY 1")
             zonas = [r[0] for r in cursor.fetchall() if r[0]]
-    except Exception: pass
+
+            # C) Calcular Resumen
+            if datos:
+                resumen['total_cedas'] = len(datos)
+                # Sumamos solo los valores negativos (aunque la vista ya debería traer solo negativos, es mejor asegurar)
+                resumen['suma_negativos_dap'] = sum(float(d.get('dap_ton_remanente_inventario') or 0) for d in datos if (d.get('dap_ton_remanente_inventario') or 0) < 0)
+                resumen['suma_negativos_urea'] = sum(float(d.get('urea_ton_remanente_inventario') or 0) for d in datos if (d.get('urea_ton_remanente_inventario') or 0) < 0)
+
+    except Exception as err:
+        print(f"Error en vista_cedas_con_remanentes_negativos: {err}")
+
     finally:
-        if not es_django and conn: conn.close()
+        if not es_django and conn:
+            conn.close()
 
     return render(request, 'fertilizantes/vista_cedas_con_remanentes_negativos.html', {
-        'datos': datos, 'unidades': unidades, 'estados': estados, 'zonas': zonas, 'unidad_seleccionada': u, 'estado_seleccionado': e
+        'datos': datos, 
+        'unidades': unidades, 
+        'estados': estados, 
+        'zonas': zonas,
+        'resumen': resumen, # Pasamos el resumen al template
+        'unidad_seleccionada': u, 
+        'estado_seleccionado': e, 
+        'zona_seleccionada': z
     })
 
 
@@ -914,43 +1054,95 @@ def vista_cedas_con_remanentes_negativos(request):
 
 @login_required
 def vista_fletes_ton_conteo_detalle(request):
-    # Pasamos el nombre 2025, el helper lo mapeará a ..._2026_td
+    # 1. Configuración dinámica
     tabla, conn, es_django = get_table_and_conn(request, "fletes_ton_conteo_detalle_td")
     
+    # 2. Parámetros GET
     u = request.GET.get('unidad_operativa')
     e = request.GET.get('estado')
     p = request.GET.get('estado_procedencia')
+    ceda = request.GET.get('id_ceda_agricultura') # <--- NUEVO
 
+    # 3. Construir WHERE
     cond, params = [], []
     if u: cond.append("unidad_operativa = %s"); params.append(u)
     if e: cond.append("estado = %s"); params.append(e)
     if p: cond.append("estado_procedencia = %s"); params.append(p)
+    
+    # Filtro flexible para CEDA (permite búsqueda parcial o exacta)
+    if ceda: 
+        # Si quieres búsqueda exacta:
+        # cond.append("id_ceda_agricultura = %s"); params.append(ceda)
+        
+        # Si prefieres búsqueda parcial (LIKE):
+        cond.append("id_ceda_agricultura ILIKE %s"); params.append(f"%{ceda}%")
+
     where = f"WHERE {' AND '.join(cond)}" if cond else ""
 
     datos = []
     unidades, estados, procedencias = [], [], []
+    mensaje = ""
+    resumen_distribucion = {}
+    resumen_ordenado = []
 
     try:
         with conn.cursor() as cursor:
-            cursor.execute(f"SELECT * FROM {tabla} {where} ORDER BY toneladas_iniciales DESC", params)
-            if es_django: cols = [col[0] for col in cursor.description]
-            else: cols = [col.name if hasattr(col, 'name') else col[0] for col in cursor.description]
-            datos = [dict(zip(cols, f)) for f in cursor.fetchall()]
-            
-            # Filtros
+            # A) Cargar Filtros
             cursor.execute(f"SELECT DISTINCT unidad_operativa FROM {tabla} ORDER BY 1")
             unidades = [r[0] for r in cursor.fetchall() if r[0]]
             cursor.execute(f"SELECT DISTINCT estado FROM {tabla} ORDER BY 1")
             estados = [r[0] for r in cursor.fetchall() if r[0]]
             cursor.execute(f"SELECT DISTINCT estado_procedencia FROM {tabla} ORDER BY 1")
             procedencias = [r[0] for r in cursor.fetchall() if r[0]]
-    except Exception as err: print(f"Error: {err}")
+
+            # B) Cargar Datos (Solo si hay filtros)
+            if params:
+                cursor.execute(f"SELECT * FROM {tabla} {where} ORDER BY toneladas_iniciales DESC", params)
+                
+                if es_django:
+                    cols = [col[0] for col in cursor.description]
+                else:
+                    cols = [col.name if hasattr(col, 'name') else col[0] for col in cursor.description]
+                
+                datos = [dict(zip(cols, f)) for f in cursor.fetchall()]
+                
+                # C) Calcular Resumen
+                for d in datos:
+                    ton = d.get('toneladas_iniciales')
+                    if ton is not None:
+                        ton_key = f"{float(ton):.1f}" 
+                        if ton_key not in resumen_distribucion:
+                            resumen_distribucion[ton_key] = {'DAP': 0, 'UREA': 0, 'Total': 0}
+                        
+                        dap = int(d.get('cantidad_fletes_dap') or 0)
+                        urea = int(d.get('cantidad_fletes_urea') or 0)
+                        
+                        resumen_distribucion[ton_key]['DAP'] += dap
+                        resumen_distribucion[ton_key]['UREA'] += urea
+                        resumen_distribucion[ton_key]['Total'] += (dap + urea)
+                
+                resumen_ordenado = sorted(resumen_distribucion.items(), key=lambda x: float(x[0]), reverse=True)
+            else:
+                mensaje = "Seleccione al menos un filtro para consultar."
+
+    except Exception as err:
+        print(f"Error en vista_fletes_ton_conteo_detalle: {err}")
+
     finally:
-        if not es_django and conn: conn.close()
+        if not es_django and conn:
+            conn.close()
 
     return render(request, "fertilizantes/vista_fletes_ton_conteo_detalle.html", {
-        "datos": datos, "unidades": unidades, "estados": estados, "procedencias": procedencias,
-        "unidad_seleccionada": u, "estado_seleccionado": e, "procedencia_seleccionada": p
+        "datos": datos, 
+        "unidades": unidades, 
+        "estados": estados, 
+        "procedencias": procedencias,
+        "mensaje": mensaje,
+        "resumen_distribucion": resumen_ordenado,
+        "unidad_seleccionada": u, 
+        "estado_seleccionado": e,
+        "procedencia_seleccionada": p,
+        "ceda_seleccionada": ceda # Para mantener el valor en el input
     })
 
 
@@ -972,18 +1164,86 @@ def vista_fletes_toneladas_recibidas_atipicas(request):
 
 @login_required
 def vista_fletes_fechas_incoherentes(request):
+    # 1. Configuración dinámica
     tabla, conn, es_django = get_table_and_conn(request, "fletes_fechas_incoherentes_2025")
+    
     datos = []
+    resumen = {
+        'total_casos': 0,
+        'salida_futura': 0,
+        'salida_mayor_llegada': 0,
+        'salida_mayor_entrega': 0
+    }
+
     try:
         with conn.cursor() as cursor:
+            # A) Consulta Principal
+            # Nota: La vista de BD ya debería traer los casos incoherentes básicos.
+            # Pero agregamos la condición de fecha futura explícitamente si la vista no la tiene,
+            # o filtramos en Python si es más seguro.
+            # Asumiremos que la tabla 'fletes_fechas_incoherentes' ya tiene la lógica base,
+            # pero vamos a consultar la tabla BASE de fletes para detectar TODOS los casos si es posible,
+            # o si preferimos usar la vista dedicada, la usamos tal cual y procesamos.
+            
+            # ESTRATEGIA: Usar la vista dedicada pero procesar en Python para clasificar el error.
             cursor.execute(f"SELECT * FROM {tabla} ORDER BY fecha_de_salida DESC")
-            if es_django: cols = [col[0] for col in cursor.description]
-            else: cols = [col.name if hasattr(col, 'name') else col[0] for col in cursor.description]
-            datos = [dict(zip(cols, f)) for f in cursor.fetchall()]
-    except Exception: pass
+            
+            if es_django:
+                cols = [col[0] for col in cursor.description]
+            else:
+                cols = [col.name if hasattr(col, 'name') else col[0] for col in cursor.description]
+            
+            raw_data = [dict(zip(cols, f)) for f in cursor.fetchall()]
+            
+            # B) Procesamiento y Clasificación
+            from datetime import date
+            hoy = date.today()
+
+            for d in raw_data:
+                f_salida = d.get('fecha_de_salida')
+                f_llegada = d.get('fecha_de_llegada')
+                f_entrega = d.get('fecha_de_entrega')
+                
+                # Normalizar a date si es datetime
+                if hasattr(f_salida, 'date'): f_salida = f_salida.date()
+                if hasattr(f_llegada, 'date'): f_llegada = f_llegada.date()
+                if hasattr(f_entrega, 'date'): f_entrega = f_entrega.date()
+
+                tipo_error = []
+                
+                # 1. Fecha Futura
+                if f_salida and f_salida > hoy:
+                    tipo_error.append("Fecha Futura")
+                    resumen['salida_futura'] += 1
+                
+                # 2. Salida > Llegada
+                if f_salida and f_llegada and f_salida > f_llegada:
+                    tipo_error.append("Salida > Llegada")
+                    resumen['salida_mayor_llegada'] += 1
+                    
+                # 3. Salida > Entrega
+                if f_salida and f_entrega and f_salida > f_entrega:
+                    tipo_error.append("Salida > Entrega")
+                    resumen['salida_mayor_entrega'] += 1
+                
+                # Guardamos el tipo de error para mostrarlo en la tabla
+                d['tipo_error'] = ", ".join(tipo_error) if tipo_error else "Incoherencia General"
+                
+                datos.append(d)
+            
+            resumen['total_casos'] = len(datos)
+
+    except Exception as err:
+        print(f"Error en vista_fletes_fechas_incoherentes: {err}")
+
     finally:
-        if not es_django and conn: conn.close()
-    return render(request, "fertilizantes/vista_fletes_fechas_incoherentes.html", {"datos": datos})
+        if not es_django and conn:
+            conn.close()
+
+    return render(request, "fertilizantes/vista_fletes_fechas_incoherentes.html", {
+        "datos": datos, 
+        "resumen": resumen
+    })
 
 
 
@@ -1287,7 +1547,7 @@ def comentarios_por_ceda(request):
         if not es_django and conn and not conn.closed: conn.close()
 
     return render(request, "fertilizantes/comentarios_por_ceda.html", ctx)
-    
+
 
 
 

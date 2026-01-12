@@ -15,6 +15,7 @@
         vertical-align: middle;
         font-weight: 500;
         white-space: nowrap;
+        text-align: center;
     }
     
     /* Bordes limpios */
@@ -28,10 +29,20 @@
         font-weight: 700;
         background-color: rgba(220, 53, 69, 0.05); /* Fondo rojo muy sutil */
     }
+
+    /* Tabla oculta para exportación */
+    #contenedor-tabla-oculta {
+        height: 0px;
+        width: 0px;
+        overflow: hidden;
+        position: absolute;
+        left: -9999px;
+    }
 </style>
 
 <div class="container mt-4 mb-5">
 
+    <!-- ENCABEZADO CON BOTONES -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="h3 fw-bold text-danger">
@@ -41,11 +52,17 @@
                 Monitoreo de CEDAs con saldo negativo en inventario físico o sistémico.
             </p>
         </div>
-        <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
-            <i class="bi bi-printer me-1"></i> Imprimir
-        </button>
+        <div class="btn-group">
+            <button class="btn btn-success btn-sm text-white" onclick="descargarCSV()">
+                <i class="bi bi-file-earmark-excel me-1"></i> Descargar CSV
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+                <i class="bi bi-printer me-1"></i> Imprimir
+            </button>
+        </div>
     </div>
 
+    <!-- FILTROS -->
     <div class="card shadow-sm border-0 mb-4" style="background-color: #f8f9fa;">
         <div class="card-body p-4">
             <h6 class="card-title fw-bold text-secondary mb-3">
@@ -89,6 +106,47 @@
         </div>
     </div>
 
+    {% if datos %}
+    <!-- RESUMEN KPI (NUEVO) -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-white border-bottom pt-3 pb-2">
+            <h6 class="fw-bold text-danger mb-0">
+                <i class="bi bi-exclamation-triangle me-2"></i>Resumen de Afectación
+            </h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-borderless mb-0 text-center align-middle">
+                    <thead class="text-muted small text-uppercase" style="font-size: 0.75rem; letter-spacing: 1px;">
+                        <tr>
+                            <th class="py-3">CEDAs Afectados</th>
+                            <th class="border-start">Total Negativo DAP</th>
+                            <th>Total Negativo UREA</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="pb-3">
+                                <span class="display-6 fw-bold text-dark">{{ resumen.total_cedas|formato_mx }}</span>
+                                <small class="d-block text-muted">Centros</small>
+                            </td>
+                            <td class="pb-3 border-start">
+                                <span class="fs-4 fw-bold text-danger">{{ resumen.suma_negativos_dap|formato_mx:3 }}</span>
+                                <small class="d-block text-muted">Toneladas</small>
+                            </td>
+                            <td class="pb-3">
+                                <span class="fs-4 fw-bold text-danger">{{ resumen.suma_negativos_urea|formato_mx:3 }}</span>
+                                <small class="d-block text-muted">Toneladas</small>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- TABLA PRINCIPAL -->
     <div class="card shadow-sm border-0">
         <div class="card-body p-0">
             <div class="table-responsive rounded-top">
@@ -140,11 +198,41 @@
 
 </div>
 
+<!-- TABLA OCULTA PARA EXPORTACIÓN -->
+<div id="contenedor-tabla-oculta">
+    <table id="tabla-exportar">
+        <thead>
+            <tr>
+                <th>Unidad Operativa</th>
+                <th>Estado</th>
+                <th>Zona Operativa</th>
+                <th>ID CEDA</th>
+                <th>Nombre CEDA</th>
+                <th>DAP Inventario</th>
+                <th>UREA Inventario</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for fila in datos %}
+            <tr>
+                <td>{{ fila.unidad_operativa }}</td>
+                <td>{{ fila.estado }}</td>
+                <td>{{ fila.zona_operativa }}</td>
+                <td>{{ fila.id_ceda_agricultura }}</td>
+                <td>{{ fila.nombre_cedas }}</td>
+                <td>{{ fila.dap_inventario|formato_mx:3 }}</td>
+                <td>{{ fila.urea_inventario|formato_mx:3 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
 <script src="{% static 'js/filtros_dependientes.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const urlFiltros = "{% url 'ajax_filtros_generales' %}";
-    const tabla = "inventarios_negativos_2025"; // Asegúrate que este nombre de tabla sea el correcto en tu backend
+    const tabla = "inventarios_negativos_2025"; 
 
     const unidadSelect = document.getElementById("unidad_operativa");
     const estadoSelect = document.getElementById("estado");
@@ -152,7 +240,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if(unidadSelect) {
         unidadSelect.addEventListener('change', () => {
-            // Asumiendo que cargarEstados está definido en 'js/filtros_dependientes.js'
             if(typeof cargarEstados === 'function') {
                 cargarEstados(`${urlFiltros}?tabla=${tabla}`, unidadSelect.value, estadoSelect, zonaSelect);
             }
@@ -167,5 +254,34 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+function descargarCSV() {
+    const tabla = document.getElementById("tabla-exportar");
+    let filas = Array.from(tabla.querySelectorAll("tr"));
+    
+    let csvContent = filas.map(fila => {
+        let celdas = Array.from(fila.querySelectorAll("th, td"));
+        return celdas.map(celda => {
+            let texto = celda.textContent.replace(/(\r\n|\n|\r)/gm, " ").trim();
+            if (texto.includes(",")) {
+                return `"${texto}"`;
+            }
+            return texto;
+        }).join(","); 
+    }).join("\n"); 
+
+    const bom = "\uFEFF"; 
+    const blob = new Blob([bom + csvContent], { type: "text/csv;charset=utf-8;" });
+    
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", "Inventarios_Negativos_Actuales.csv");
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
 </script>
 {% endblock %}

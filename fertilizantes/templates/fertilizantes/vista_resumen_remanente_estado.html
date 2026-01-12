@@ -37,10 +37,20 @@
         text-align: center !important; /* El guion se ve mejor centrado */
         display: block; /* Asegura que tome el ancho para centrarse */
     }
+
+    /* Tabla oculta para exportación */
+    #contenedor-tabla-oculta {
+        height: 0px;
+        width: 0px;
+        overflow: hidden;
+        position: absolute;
+        left: -9999px;
+    }
 </style>
 
 <div class="container mt-4 mb-5">
 
+    <!-- ENCABEZADO CON BOTONES -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="h3 fw-bold" style="color: #264e46;">
@@ -50,11 +60,68 @@
                 Consolidado de remanentes físicos por Unidad Operativa y Estado.
             </p>
         </div>
-        <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
-            <i class="bi bi-printer me-1"></i> Imprimir
-        </button>
+        <div class="btn-group">
+            <button class="btn btn-success btn-sm text-white" onclick="descargarCSV()">
+                <i class="bi bi-file-earmark-excel me-1"></i> Descargar CSV
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+                <i class="bi bi-printer me-1"></i> Imprimir
+            </button>
+        </div>
     </div>
 
+    {% if datos %}
+    <!-- RESUMEN KPI (NUEVO) -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-white border-bottom pt-3 pb-2">
+            <h6 class="fw-bold text-secondary mb-0">
+                <i class="bi bi-bar-chart-line me-2"></i>Totales Nacionales
+            </h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-borderless mb-0 text-center align-middle">
+                    <thead class="text-muted small text-uppercase" style="font-size: 0.75rem; letter-spacing: 1px;">
+                        <tr>
+                            <th class="py-3">Concepto</th>
+                            <th class="border-start">DAP (Ton)</th>
+                            <th>UREA (Ton)</th>
+                            <th class="border-start bg-light">Total (Ton)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="text-start ps-4 fw-bold text-secondary">Entradas Totales</td>
+                            <td class="border-start">{{ resumen.total_entrada_dap|formato_mx:3 }}</td>
+                            <td>{{ resumen.total_entrada_urea|formato_mx:3 }}</td>
+                            <td class="border-start bg-light fw-bold text-dark">
+                                {{ resumen.total_entrada_global|formato_mx:3 }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-start ps-4 fw-bold text-secondary">Salidas Totales</td>
+                            <td class="border-start">{{ resumen.total_salida_dap|formato_mx:3 }}</td>
+                            <td>{{ resumen.total_salida_urea|formato_mx:3 }}</td>
+                            <td class="border-start bg-light fw-bold text-dark">
+                                {{ resumen.total_salida_global|formato_mx:3 }}
+                            </td>
+                        </tr>
+                        <tr class="border-top">
+                            <td class="text-start ps-4 fw-bold text-dark py-3">Inventario Final</td>
+                            <td class="border-start fw-bold text-success">{{ resumen.total_inventario_dap|formato_mx:3 }}</td>
+                            <td class="fw-bold text-success">{{ resumen.total_inventario_urea|formato_mx:3 }}</td>
+                            <td class="border-start bg-light fw-bold text-success fs-5">
+                                {{ resumen.total_inventario_global|formato_mx:3 }}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- TABLA PRINCIPAL -->
     <div class="card shadow-sm border-0">
         <div class="card-body p-0">
             <div class="table-responsive rounded-top">
@@ -152,4 +219,70 @@
     </div>
 
 </div>
+
+<!-- TABLA OCULTA PARA EXPORTACIÓN -->
+<div id="contenedor-tabla-oculta">
+    <table id="tabla-exportar">
+        <thead>
+            <tr>
+                <th>Unidad Operativa</th>
+                <th>Estado</th>
+                <th>Entrada DAP</th>
+                <th>Entrada UREA</th>
+                <th>Salida DAP</th>
+                <th>Salida UREA</th>
+                <th>Inventario Final DAP</th>
+                <th>Inventario Final UREA</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for fila in datos %}
+            <tr>
+                <td>{{ fila.unidad_operativa }}</td>
+                <td>{{ fila.estado }}</td>
+                <td>{{ fila.dap_remanente_entrada|formato_mx:3 }}</td>
+                <td>{{ fila.urea_remanente_entrada|formato_mx:3 }}</td>
+                <td>{{ fila.dap_remanente_salida|formato_mx:3 }}</td>
+                <td>{{ fila.urea_remanente_salida|formato_mx:3 }}</td>
+                <td>{{ fila.dap_remanente_inventario|formato_mx:3 }}</td>
+                <td>{{ fila.urea_remanente_inventario|formato_mx:3 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function descargarCSV() {
+        const tabla = document.getElementById("tabla-exportar");
+        let filas = Array.from(tabla.querySelectorAll("tr"));
+        
+        let csvContent = filas.map(fila => {
+            let celdas = Array.from(fila.querySelectorAll("th, td"));
+            return celdas.map(celda => {
+                let texto = celda.textContent.replace(/(\r\n|\n|\r)/gm, " ").trim();
+                if (texto.includes(",")) {
+                    return `"${texto}"`;
+                }
+                return texto;
+            }).join(","); 
+        }).join("\n"); 
+
+        const bom = "\uFEFF"; 
+        const blob = new Blob([bom + csvContent], { type: "text/csv;charset=utf-8;" });
+        
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", "Resumen_Remanentes_Estado.csv");
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+</script>
 {% endblock %}
