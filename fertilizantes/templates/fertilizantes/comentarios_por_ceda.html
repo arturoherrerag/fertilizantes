@@ -14,7 +14,7 @@
         vertical-align: middle;
         text-align: center;
         border: 1px solid rgba(255,255,255,0.1);
-        font-size: 0.85rem; /* Un poco más grande que estadísticas para leer mejor */
+        font-size: 0.85rem;
     }
 
     /* Inputs de filtros estilo "Clean" */
@@ -28,7 +28,7 @@
     
     .input-custom {
         border: 0 !important;
-        box-shadow: 0 .125rem .25rem rgba(0,0,0,.075) !important; /* shadow-sm */
+        box-shadow: 0 .125rem .25rem rgba(0,0,0,.075) !important;
     }
 
     /* Textarea de lectura estilizado */
@@ -58,10 +58,9 @@
     }
 </style>
 
-<!-- Usamos container-fluid para ocupar todo el ancho como en la referencia -->
 <div class="container-fluid mt-4 mb-5">
 
-    <!-- Encabezado idéntico a la referencia -->
+    <!-- Encabezado -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="h3 fw-bold" style="color: #264e46;">
@@ -78,14 +77,13 @@
         </div>
     </div>
 
-    <!-- Tarjeta de Filtros (Estilo idéntico) -->
+    <!-- Tarjeta de Filtros -->
     <div class="card shadow-sm border-0 mb-4 bg-light">
         <div class="card-body p-4">
             <h6 class="fw-bold text-secondary mb-3">
                 <i class="bi bi-funnel me-1"></i> Filtros de Búsqueda
             </h6>
             
-            <!-- Formulario explícito para replicar el estilo de inputs -->
             <form method="get" class="row g-3 align-items-end" id="filtros-form">
                 <div class="col-md-3">
                     <label class="form-label-custom">Unidad Operativa</label>
@@ -107,7 +105,7 @@
                 <div class="col-md-3">
                     <label class="form-label-custom">Zona Operativa</label>
                     <select name="zona_operativa" id="filtro_zona" class="form-select input-custom">
-                        <option value="">-- Todas --</option>
+                        <option value="">-- Todos --</option>
                     </select>
                 </div>
 
@@ -116,12 +114,18 @@
                     <input type="text" name="id_ceda_agricultura" id="filtro_ceda" class="form-control input-custom" placeholder="Ej. CTT-3930" value="{{ request.GET.id_ceda_agricultura }}">
                 </div>
 
-                <!-- Botones alineados a la derecha abajo -->
-                <div class="col-12 text-end mt-3">
-                    <button type="button" class="btn btn-outline-secondary btn-sm me-2" onclick="toggleColumnasExtra()">
+                <div class="col-12 d-flex justify-content-end align-items-center mt-3 gap-2">
+                    
+                    <!-- NUEVO CHECKBOX: Solo con comentarios -->
+                    <div class="form-check form-switch me-3">
+                        <input class="form-check-input" type="checkbox" role="switch" id="solo_con_comentarios" name="solo_con_comentarios" {% if solo_con_comentarios %}checked{% endif %}>
+                        <label class="form-check-label small fw-bold text-secondary" for="solo_con_comentarios">Solo con comentarios</label>
+                    </div>
+
+                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="toggleColumnasExtra()">
                         <i class="bi bi-layout-three-columns me-1"></i> Ver Ubicación
                     </button>
-                    <button type="button" class="btn btn-success text-white shadow-sm me-2" onclick="exportTableToCSV('comentarios_ceda.csv')">
+                    <button type="button" class="btn btn-success text-white shadow-sm" onclick="exportTableToCSV('comentarios_ceda.csv')">
                         <i class="bi bi-file-earmark-excel me-1"></i> Descargar CSV
                     </button>
                     <button type="submit" class="btn btn-primary px-4 shadow-sm" style="background-color: #264e46; border-color: #264e46;">
@@ -135,6 +139,34 @@
     {% if filtro_aplicado %}
         {% if not df.empty %}
         
+        <!-- Resumen KPI -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-borderless mb-0 text-center align-middle">
+                        <thead class="text-muted small text-uppercase" style="font-size: 0.75rem; letter-spacing: 1px;">
+                            <tr>
+                                <th class="py-3">Total Comentarios</th>
+                                <th class="border-start">CEDAs con Observaciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="pb-3">
+                                    <span class="display-6 fw-bold text-dark">{{ resumen.total_comentarios }}</span>
+                                    <small class="d-block text-muted">Registros encontrados</small>
+                                </td>
+                                <td class="pb-3 border-start bg-light">
+                                    <span class="display-6 fw-bold text-dark">{{ resumen.cedas_distintos }}</span>
+                                    <small class="d-block text-muted">Centros distintos</small>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
         <!-- Tarjeta de Resultados -->
         <div class="card shadow-sm border-0">
             <div class="card-body p-0">
@@ -160,16 +192,23 @@
                                 <td class="font-monospace fw-bold text-dark text-center">{{ row.id_ceda_agricultura }}</td>
                                 <td class="fw-medium text-start">{{ row.nombre_cedas }}</td>
                                 
-                                <!-- Columna de Lectura -->
                                 <td class="p-2">
                                     <textarea readonly class="comentarios-actuales {% if row.comentarios_actuales %}tiene-datos{% endif %}">{{ row.comentarios_actuales|default:"Sin comentarios previos." }}</textarea>
                                 </td>
 
-                                <!-- Columna de Escritura -->
                                 <td class="p-2 bg-light border-start">
                                     <form method="post" class="d-flex flex-column h-100 justify-content-center">
                                         {% csrf_token %}
                                         <input type="hidden" name="id_ceda_agricultura" value="{{ row.id_ceda_agricultura }}">
+                                        
+                                        <!-- CAMPOS OCULTOS PARA PRESERVAR FILTROS -->
+                                        <input type="hidden" name="filtro_unidad_previo" value="{{ request.GET.unidad_operativa }}">
+                                        <input type="hidden" name="filtro_estado_previo" value="{{ request.GET.estado }}">
+                                        <input type="hidden" name="filtro_zona_previo" value="{{ request.GET.zona_operativa }}">
+                                        <input type="hidden" name="filtro_ceda_previo" value="{{ request.GET.id_ceda_agricultura }}">
+                                        
+                                        <!-- NUEVO CAMPO OCULTO: Preservar estado del checkbox -->
+                                        <input type="hidden" name="filtro_solo_comentarios_previo" value="{{ request.GET.solo_con_comentarios }}">
                                         
                                         <textarea name="comentario" rows="2" 
                                                   class="form-control form-control-sm mb-2 input-custom" 

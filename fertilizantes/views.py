@@ -77,6 +77,7 @@ TABLE_MAPPING_2026 = {
     "pedidos_detalle_por_fecha_2025": "pedidos_detalle_por_fecha_2026",
     "entregas_diarias_2025": "entregas_diarias_2026",
     "vista_comentarios_ceda": "vista_comentarios_ceda_2026",
+    "comentarios_ceda": "comentarios_ceda_2026",           # Para ESCRIBIR (INSERT)
     
     # Tablas Base
     "vw_derechohabientes_con_contexto": "vw_derechohabientes_con_contexto_2026",
@@ -755,39 +756,68 @@ def vista_inventarios_negativos_x_dia(request):
 
 @login_required
 def vista_inventarios_negativos_actuales(request):
+    # 1. Configuración dinámica
     tabla, conn, es_django = get_table_and_conn(request, "inventarios_negativos_2025")
     
+    # 2. Parámetros GET
     u = request.GET.get('unidad_operativa')
     e = request.GET.get('estado')
     z = request.GET.get('zona_operativa')
     
+    # 3. Construir WHERE
     cond, params = [], []
     if u: cond.append("unidad_operativa = %s"); params.append(u)
     if e: cond.append("estado = %s"); params.append(e)
     if z: cond.append("zona_operativa = %s"); params.append(z)
     where = f"WHERE {' AND '.join(cond)}" if cond else ""
 
-    datos, unidades, estados, zonas = [], [], [], []
+    datos = []
+    unidades, estados, zonas = [], [], []
+    resumen = {'total_cedas': 0, 'suma_negativos_dap': 0, 'suma_negativos_urea': 0}
+
     try:
         with conn.cursor() as cursor:
+            # A) Consulta Principal
             cursor.execute(f"SELECT * FROM {tabla} {where} ORDER BY unidad_operativa, estado", params)
-            if es_django: cols = [col[0] for col in cursor.description]
-            else: cols = [col.name if hasattr(col, 'name') else col[0] for col in cursor.description]
+            
+            if es_django:
+                cols = [col[0] for col in cursor.description]
+            else:
+                cols = [col.name if hasattr(col, 'name') else col[0] for col in cursor.description]
+            
             datos = [dict(zip(cols, f)) for f in cursor.fetchall()]
             
+            # B) Filtros Dinámicos
             cursor.execute(f"SELECT DISTINCT unidad_operativa FROM {tabla} ORDER BY 1")
             unidades = [r[0] for r in cursor.fetchall() if r[0]]
             cursor.execute(f"SELECT DISTINCT estado FROM {tabla} ORDER BY 1")
             estados = [r[0] for r in cursor.fetchall() if r[0]]
             cursor.execute(f"SELECT DISTINCT zona_operativa FROM {tabla} ORDER BY 1")
             zonas = [r[0] for r in cursor.fetchall() if r[0]]
-    except Exception: pass
+
+            # C) Calcular Resumen
+            if datos:
+                resumen['total_cedas'] = len(datos)
+                # Sumamos solo los valores negativos (aunque la vista ya debería traer solo negativos, es mejor asegurar)
+                resumen['suma_negativos_dap'] = sum((d.get('dap_inventario') or 0) for d in datos if (d.get('dap_inventario') or 0) < 0)
+                resumen['suma_negativos_urea'] = sum((d.get('urea_inventario') or 0) for d in datos if (d.get('urea_inventario') or 0) < 0)
+
+    except Exception as err:
+        print(f"Error en vista_inventarios_negativos_actuales: {err}")
+
     finally:
-        if not es_django and conn: conn.close()
+        if not es_django and conn:
+            conn.close()
 
     return render(request, 'fertilizantes/vista_inventarios_negativos_actuales.html', {
-        'datos': datos, 'unidades': unidades, 'estados': estados, 'zonas': zonas,
-        'unidad_seleccionada': u, 'estado_seleccionado': e, 'zona_seleccionada': z
+        'datos': datos, 
+        'unidades': unidades, 
+        'estados': estados, 
+        'zonas': zonas,
+        'resumen': resumen, # Pasamos el resumen al template
+        'unidad_seleccionada': u, 
+        'estado_seleccionado': e, 
+        'zona_seleccionada': z
     })
 
 
@@ -1162,46 +1192,146 @@ def vista_derechohabientes(request):
 @login_required
 def comentarios_por_ceda(request):
     from datetime import datetime
+    from django.urls import reverse
+    from urllib.parse import urlencode
+    
+    # 1. Configuración dinámica
+    tabla_vista, conn, es_django = get_table_and_conn(request, "vista_comentarios_ceda")
+    tabla_escritura, _, _ = get_table_and_conn(request, "comentarios_ceda") 
+
+    # 2. Manejo del POST (Guardar)
     if request.method == "POST":
         id_ceda = request.POST.get("id_ceda_agricultura")
         texto = request.POST.get("comentario", "").strip()
+        
+        # Capturar filtros para redirección (incluyendo el nuevo checkbox)
+        filtros_para_url = {
+            'unidad_operativa': request.POST.get('filtro_unidad_previo', ''),
+            'estado': request.POST.get('filtro_estado_previo', ''),
+            'zona_operativa': request.POST.get('filtro_zona_previo', ''),
+            'id_ceda_agricultura': request.POST.get('filtro_ceda_previo', ''),
+            'solo_con_comentarios': request.POST.get('filtro_solo_comentarios_previo', '') # <--- NUEVO
+        }
+        
         if id_ceda and texto:
-            with psycopg_conn.cursor() as cur:
-                cur.execute("INSERT INTO comentarios_ceda (id_ceda_agricultura, comentario, fecha) VALUES (%s, %s, %s)", 
-                            (id_ceda, texto, datetime.now()))
-                psycopg_conn.commit()
-        return redirect("comentarios_por_ceda")
+            try:
+                with conn.cursor() as cur:
+                    sql = f"""
+                        INSERT INTO {tabla_escritura} (id, id_ceda_agricultura, comentario, fecha) 
+                        VALUES (
+                            (SELECT COALESCE(MAX(id), 0) + 1 FROM {tabla_escritura}),
+                            %s, %s, %s
+                        )
+                    """
+                    cur.execute(sql, (id_ceda, texto, datetime.now()))
+                    if not es_django: conn.commit()
+            except Exception as e: print(f"Error: {e}")
+            finally:
+                if not es_django and conn: conn.close()
+        
+        base_url = reverse("comentarios_por_ceda")
+        query_string = urlencode({k: v for k, v in filtros_para_url.items() if v})
+        return redirect(f"{base_url}?{query_string}")
 
-    where, params, ctx = _aplicar_filtros_get(request, ["unidad_operativa", "estado", "zona_operativa", "id_ceda_agricultura"])
-    params = [p for p in params if p not in ("", None)]
+    # 3. Manejo del GET
+    u = request.GET.get('unidad_operativa', '')
+    e = request.GET.get('estado', '')
+    z = request.GET.get('zona_operativa', '')
+    ceda = request.GET.get('id_ceda_agricultura', '')
+    solo_comentarios = request.GET.get('solo_con_comentarios') == 'on' # <--- NUEVO
+
+    cond, params = [], []
+    if u: cond.append("unidad_operativa = %s"); params.append(u)
+    if e: cond.append("estado = %s"); params.append(e)
+    if z: cond.append("zona_operativa = %s"); params.append(z)
+    if ceda: cond.append("id_ceda_agricultura = %s"); params.append(ceda)
     
-    with connection.cursor() as cur:
-        cur.execute("SELECT DISTINCT unidad_operativa FROM vista_comentarios_ceda WHERE unidad_operativa IS NOT NULL ORDER BY 1")
-        ctx["unidades"] = [r[0] for r in cur.fetchall()]
+    # Lógica del nuevo filtro
+    if solo_comentarios:
+        cond.append("comentarios_actuales IS NOT NULL AND TRIM(comentarios_actuales) != ''")
 
-    if not params:
-        ctx["filtro_aplicado"] = False
-        return render(request, "fertilizantes/comentarios_por_ceda.html", ctx)
+    where = f"WHERE {' AND '.join(cond)}" if cond else ""
 
-    query = f"SELECT * FROM vista_comentarios_ceda {where} ORDER BY unidad_operativa, estado, zona_operativa, nombre_cedas"
-    ctx["df"] = pd.read_sql(query, con=engine, params=[tuple(params)])
-    ctx["filtro_aplicado"] = True
+    ctx = {
+        "unidades": [], "df": pd.DataFrame(), "filtro_aplicado": False,
+        "resumen": {"total_comentarios": 0, "cedas_distintos": 0},
+        "unidad_operativa_seleccionado": u, "estado_seleccionado": e, "zona_seleccionada": z,
+        "solo_con_comentarios": solo_comentarios # Para marcar el checkbox en el template
+    }
+
+    try:
+        with conn.cursor() as cur:
+            cur.execute(f"SELECT DISTINCT unidad_operativa FROM {tabla_vista} WHERE unidad_operativa IS NOT NULL ORDER BY 1")
+            ctx["unidades"] = [r[0] for r in cur.fetchall() if r[0]]
+
+            # Si hay filtros O si se pidió "solo con comentarios", ejecutamos la consulta
+            if params or solo_comentarios:
+                query = f"SELECT * FROM {tabla_vista} {where} ORDER BY unidad_operativa, estado, zona_operativa, nombre_cedas"
+                cur.execute(query, params)
+                
+                if es_django: cols = [col[0] for col in cur.description]
+                else: cols = [col.name if hasattr(col, 'name') else col[0] for col in cur.description]
+                
+                data = [dict(zip(cols, row)) for row in cur.fetchall()]
+                ctx["df"] = pd.DataFrame(data)
+                ctx["filtro_aplicado"] = True
+                
+                if not ctx["df"].empty:
+                    ctx["resumen"] = {
+                        "total_comentarios": len(ctx["df"]),
+                        "cedas_distintos": ctx["df"]["id_ceda_agricultura"].nunique()
+                    }
+
+    except Exception as err: print(f"Error: {err}")
+    finally:
+        if not es_django and conn and not conn.closed: conn.close()
+
     return render(request, "fertilizantes/comentarios_por_ceda.html", ctx)
+    
+
+
 
 @require_GET
 def ajax_zonas_por_filtros(request):
-    unidad, estado = request.GET.get("unidad", "").strip(), request.GET.get("estado", "").strip()
-    if not unidad and not estado: return JsonResponse({"zonas": []})
+    """
+    API auxiliar para obtener zonas operativas basadas en filtros.
+    Usada por la vista de comentarios.
+    """
+    unidad = request.GET.get("unidad", "").strip()
+    estado = request.GET.get("estado", "").strip()
     
-    query, params = "SELECT DISTINCT zona_operativa FROM vista_comentarios_ceda WHERE 1=1", []
-    if unidad: query += " AND unidad_operativa = %s"; params.append(unidad)
-    if estado: query += " AND estado = %s"; params.append(estado)
+    # Usamos la vista de comentarios como base para obtener las zonas
+    tabla, conn, es_django = get_table_and_conn(request, "vista_comentarios_ceda")
     
+    if not unidad and not estado: 
+        return JsonResponse({"zonas": []})
+    
+    query = f"SELECT DISTINCT zona_operativa FROM {tabla} WHERE 1=1"
+    params = []
+    
+    if unidad: 
+        query += " AND unidad_operativa = %s"
+        params.append(unidad)
+    if estado: 
+        query += " AND estado = %s"
+        params.append(estado)
+    
+    query += " ORDER BY 1"
+    
+    lista = []
     try:
-        zonas = pd.read_sql(query, con=engine, params=params)
-        lista = sorted(zonas["zona_operativa"].dropna().unique().tolist())
-    except: lista = []
+        with conn.cursor() as cur:
+            cur.execute(query, params)
+            lista = [r[0] for r in cur.fetchall() if r[0]]
+    except Exception as e:
+        print(f"Error en ajax_zonas_por_filtros: {e}")
+    finally:
+        if not es_django and conn:
+            conn.close()
+            
     return JsonResponse({"zonas": lista})
+
+
 
 @require_GET
 @login_required
