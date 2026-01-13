@@ -88,7 +88,7 @@
                         <select name="estado" class="form-select border-0 shadow-sm bg-light">
                             <option value="">-- Todos --</option>
                             {% for e in estados %}
-                                <option value="{{ e }}" {% if e == estado_seleccionada %}selected{% endif %}>{{ e }}</option>
+                                <option value="{{ e }}" {% if e == estado_seleccionado %}selected{% endif %}>{{ e }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -225,9 +225,10 @@
                 
                 <nav aria-label="Navegación de páginas">
                     <ul class="pagination pagination-sm mb-0">
+                        <!-- ANTERIOR -->
                         {% if datos.has_previous %}
                             <li class="page-item">
-                                <button class="page-link" onclick="irAPagina({{ datos.previous_page_number }})">
+                                <button class="page-link" type="button" onclick="irAPagina({{ datos.previous_page_number }})">
                                     &laquo; Anterior
                                 </button>
                             </li>
@@ -235,15 +236,17 @@
                             <li class="page-item disabled"><span class="page-link">&laquo; Anterior</span></li>
                         {% endif %}
 
+                        <!-- PÁGINA ACTUAL -->
                         <li class="page-item active">
                             <span class="page-link">
                                 Pág {{ datos.number }} de {{ datos.paginator.num_pages }}
                             </span>
                         </li>
 
+                        <!-- SIGUIENTE -->
                         {% if datos.has_next %}
                             <li class="page-item">
-                                <button class="page-link" onclick="irAPagina({{ datos.next_page_number }})">
+                                <button class="page-link" type="button" onclick="irAPagina({{ datos.next_page_number }})">
                                     Siguiente &raquo;
                                 </button>
                             </li>

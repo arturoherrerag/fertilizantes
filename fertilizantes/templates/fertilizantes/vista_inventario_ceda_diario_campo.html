@@ -29,6 +29,15 @@
     .diff-positiva { color: #198754; font-weight: bold; } /* Verde si sobra */
     .diff-negativa { color: #dc3545; font-weight: bold; } /* Rojo si falta */
     .diff-cero { color: #e9ecef; } /* Gris suave si cuadra */
+
+    /* Tabla oculta para exportación */
+    #contenedor-tabla-oculta {
+        height: 0px;
+        width: 0px;
+        overflow: hidden;
+        position: absolute;
+        left: -9999px;
+    }
 </style>
 
 <div class="container-fluid mt-4 mb-5">
@@ -104,6 +113,44 @@
     {% endif %}
 
     {% if datos %}
+    <!-- RESUMEN KPI (NUEVO) -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-white border-bottom pt-3 pb-2">
+            <h6 class="fw-bold text-secondary mb-0">
+                <i class="bi bi-bar-chart-line me-2"></i>Resumen de Diferencias
+            </h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-borderless mb-0 text-center align-middle">
+                    <thead class="text-muted small text-uppercase" style="font-size: 0.75rem; letter-spacing: 1px;">
+                        <tr>
+                            <th class="py-3">Total Registros</th>
+                            <th class="border-start">Diferencia Total DAP</th>
+                            <th>Diferencia Total UREA</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="pb-3">
+                                <span class="display-6 fw-bold text-dark">{{ resumen.total_registros|formato_mx }}</span>
+                                <small class="d-block text-muted">Registros</small>
+                            </td>
+                            <td class="pb-3 border-start">
+                                <span class="fs-4 fw-bold {% if resumen.suma_diferencia_dap < 0 %}text-danger{% else %}text-success{% endif %}">{{ resumen.suma_diferencia_dap|formato_mx:3 }}</span>
+                                <small class="d-block text-muted">Toneladas</small>
+                            </td>
+                            <td class="pb-3">
+                                <span class="fs-4 fw-bold {% if resumen.suma_diferencia_urea < 0 %}text-danger{% else %}text-success{% endif %}">{{ resumen.suma_diferencia_urea|formato_mx:3 }}</span>
+                                <small class="d-block text-muted">Toneladas</small>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <div class="card shadow-sm border-0">
         <div class="card-body p-0">
             <div class="table-responsive rounded-top" style="max-height: 600px; overflow-y: auto;">
@@ -177,6 +224,44 @@
 
 </div>
 
+<!-- TABLA OCULTA PARA EXPORTACIÓN -->
+<div id="contenedor-tabla-oculta">
+    <table id="tabla-exportar">
+        <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>Unidad Operativa</th>
+                <th>Estado</th>
+                <th>ID CEDA</th>
+                <th>Nombre CEDA</th>
+                <th>DAP SIGAP</th>
+                <th>DAP Campo</th>
+                <th>Diferencia DAP</th>
+                <th>UREA SIGAP</th>
+                <th>UREA Campo</th>
+                <th>Diferencia UREA</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for f in datos %}
+            <tr>
+                <td>{{ f.fecha|date:"d/m/Y" }}</td>
+                <td>{{ f.unidad_operativa }}</td>
+                <td>{{ f.estado }}</td>
+                <td>{{ f.id_ceda_agricultura }}</td>
+                <td>{{ f.nombre_cedas }}</td>
+                <td>{{ f.dap_inventario_sigap|formato_mx:3 }}</td>
+                <td>{{ f.dap_inventario_campo|formato_mx:3 }}</td>
+                <td>{{ f.dap_sigap_campo|formato_mx:3 }}</td>
+                <td>{{ f.urea_inventario_sigap|formato_mx:3 }}</td>
+                <td>{{ f.urea_inventario_campo|formato_mx:3 }}</td>
+                <td>{{ f.urea_sigap_campo|formato_mx:3 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -234,7 +319,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // --- 2. Lógica para Descargar CSV (Cliente) ---
 function descargarCSV() {
-    const tabla = document.getElementById("tabla-resultados");
+    const tabla = document.getElementById("tabla-exportar");
     if (!tabla) {
         alert("No hay datos para exportar.");
         return;
@@ -244,7 +329,7 @@ function descargarCSV() {
     const filas = tabla.querySelectorAll("tr");
     
     for (let i = 0; i < filas.length; i++) {
-        let fila = [], cols = filas[i].querySelectorAll("td, th");
+        let fila = [], cols = filas[i].querySelectorAll("th, td");
         
         for (let j = 0; j < cols.length; j++) {
             // Limpiar texto: quitar saltos de línea múltiples y espacios extra

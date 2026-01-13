@@ -591,6 +591,15 @@ def vista_inventario_diario_ceda(request):
     
     tabla, conn, es_django = get_table_and_conn(request, nombre_tabla_base)
 
+    # --- DEBUG ---
+    print(f"DEBUG INVENTARIO:")
+    print(f"Año: {anio}")
+    print(f"Tabla Base (2025): {nombre_tabla_base}")
+    print(f"Tabla Final (Mapeada): {tabla}")
+    if not es_django:
+        print(f"Conectado a BD: {conn.info.dbname}")
+    # -------------
+
     datos = []
     resumen = None
     ceda_info = None
@@ -1306,145 +1315,273 @@ def vista_inventario_ceda_diario(request):
     """
     Vista comparativa Campo vs SIGAP (antes 'vista_inventario_ceda_diario_campo').
     """
-    anio = get_anio_context(request)
-    tbl = f"inventario_ceda_diario_{anio}_campo_sigap"
-    cols = ["unidad_operativa", "estado", "zona_operativa", "id_ceda_agricultura"]
-    where, params, ctx = _aplicar_filtros_get(request, cols)
+    # 1. Usar el helper para obtener tabla y conexión correcta
+    # Pasamos el nombre base de 2025. El helper lo mapeará si es necesario.
+    tabla, conn, es_django = get_table_and_conn(request, "inventario_ceda_diario_2025_campo_sigap")
+    
+    # 2. Parámetros GET
+    u = request.GET.get('unidad_operativa')
+    e = request.GET.get('estado')
+    ceda = request.GET.get('id_ceda_agricultura')
+    fecha_fin = request.GET.get('fecha_fin')
 
-    with connection.cursor() as cur:
-        cur.execute(f"SELECT DISTINCT unidad_operativa FROM {tbl} WHERE unidad_operativa IS NOT NULL ORDER BY 1")
-        ctx["unidades"] = [r[0] for r in cur.fetchall()]
+    # 3. Construir WHERE
+    cond, params = [], []
+    if u: cond.append("unidad_operativa = %s"); params.append(u)
+    if e: cond.append("estado = %s"); params.append(e)
+    if ceda: cond.append("id_ceda_agricultura = %s"); params.append(ceda)
+    
+    # Lógica de fecha
+    if not fecha_fin:
+        from datetime import date, timedelta
+        fecha_fin = (date.today() - timedelta(days=1)).strftime("%Y-%m-%d")
+    
+    cond.append("fecha <= %s")
+    params.append(fecha_fin)
 
-    ctx["unidad_operativa_seleccionada"] = ctx.get("unidad_operativa_seleccionado")
+    where = f"WHERE {' AND '.join(cond)}"
 
-    if not params:
-        ctx.update({"datos": [], "mensaje": "Seleccione al menos un filtro."})
-        return render(request, "fertilizantes/vista_inventario_ceda_diario_campo.html", ctx)
+    datos = []
+    unidades = []
+    resumen = {'total_registros': 0, 'suma_diferencia_dap': 0, 'suma_diferencia_urea': 0}
 
-    if not request.GET.get("fecha_fin", "").strip():
-        ayer = date.today() - timedelta(days=1)
-        where += (" AND " if where else " WHERE ") + "fecha <= %s"
-        params.append(ayer)
-        ctx["fecha_fin"] = ayer.strftime("%Y-%m-%d")
+    try:
+        with conn.cursor() as cursor:
+            # A) Cargar Unidades (Siempre)
+            cursor.execute(f"SELECT DISTINCT unidad_operativa FROM {tabla} WHERE unidad_operativa IS NOT NULL ORDER BY 1")
+            unidades = [r[0] for r in cursor.fetchall() if r[0]]
 
-    sql = f"SELECT * FROM {tbl} {where} ORDER BY fecha DESC, id_ceda_agricultura"
-    with connection.cursor() as cur:
-        cur.execute(sql, params)
-        headers = [c[0] for c in cur.description]
-        ctx["datos"] = [dict(zip(headers, row)) for row in cur.fetchall()]
+            # B) Cargar Datos (Solo si hay filtros de ubicación o CEDA, para no cargar todo)
+            # Opcional: Si quieres cargar todo por defecto, quita el 'if u or e or ceda:'
+            if u or e or ceda:
+                cursor.execute(f"SELECT * FROM {tabla} {where} ORDER BY fecha DESC, id_ceda_agricultura", params)
+                
+                if es_django:
+                    cols = [col[0] for col in cursor.description]
+                else:
+                    cols = [col.name if hasattr(col, 'name') else col[0] for col in cursor.description]
+                
+                datos = [dict(zip(cols, f)) for f in cursor.fetchall()]
+                
+                # C) Calcular Resumen
+                if datos:
+                    resumen = {
+                        'total_registros': len(datos),
+                        'suma_diferencia_dap': sum((d.get('dap_sigap_campo') or 0) for d in datos),
+                        'suma_diferencia_urea': sum((d.get('urea_sigap_campo') or 0) for d in datos)
+                    }
 
-    return render(request, "fertilizantes/vista_inventario_ceda_diario_campo.html", ctx)
+    except Exception as err:
+        print(f"Error en vista_inventario_ceda_diario: {err}")
+    
+    finally:
+        if not es_django and conn:
+            conn.close()
+
+    return render(request, "fertilizantes/vista_inventario_ceda_diario_campo.html", {
+        "datos": datos, 
+        "unidades": unidades, 
+        "resumen": resumen,
+        "unidad_operativa_seleccionada": u,
+        "fecha_fin": fecha_fin,
+        # Pasamos el resto de filtros para mantener el estado en el template si es necesario
+        "request": request 
+    })
+
+
 
 # ==========================================
 # 🔍 CONSULTA DERECHOHABIENTES (Paginada)
 # ==========================================
 
-# Asegúrate de tener este import al inicio de tu archivo views.py
 
 @login_required
 def vista_derechohabientes(request):
     """
-    Consulta paginada en servidor (Server-side Pagination).
-    Permite navegar millones de registros en bloques de 200.
+    Consulta paginada de derechohabientes.
+    Refactorizada para usar SQL directo y soportar 2026.
     """
-    qs = DH.objects.all()
-
-    # --- 1. Filtros Generales ---
-    uo   = request.GET.get("unidad_operativa")
-    edo  = request.GET.get("estado")
-    ceda = request.GET.get("id_ceda_agricultura")
+    # 1. Configuración dinámica
+    tabla, conn, es_django = get_table_and_conn(request, "vw_derechohabientes_con_contexto")
     
-    if uo: qs = qs.filter(unidad_operativa=uo)
-    if edo: qs = qs.filter(estado=edo)
-    if ceda: qs = qs.filter(id_ceda_agricultura=ceda)
-
-    # --- 2. Filtros de Fecha ---
-    fecha_inicio = request.GET.get("fecha_inicio")
-    fecha_fin    = request.GET.get("fecha_fin")
-
-    if fecha_inicio: qs = qs.filter(fecha_entrega__gte=fecha_inicio)
-    if fecha_fin: qs = qs.filter(fecha_entrega__lte=fecha_fin)
-
-    # --- 3. Búsquedas Específicas ---
-    for campo in ("acuse_estatal", "curp_solicitud", "curp_renapo"):
-        v = request.GET.get(campo)
-        if v: qs = qs.filter(**{f"{campo}__iexact": v})
-
-    # --- 4. Búsqueda Masiva (Lista) ---
+    # 2. Parámetros GET
+    u = request.GET.get("unidad_operativa")
+    edo = request.GET.get("estado")
+    ceda = request.GET.get("id_ceda_agricultura")
+    fi = request.GET.get("fecha_inicio")
+    ff = request.GET.get("fecha_fin")
+    acuse = request.GET.get("acuse_estatal")
+    curp_s = request.GET.get("curp_solicitud")
+    curp_r = request.GET.get("curp_renapo")
     lista = request.GET.get("lista_acuses")
-    if lista:
-        acuses = [l.strip() for l in lista.splitlines() if l.strip()]
-        qs = qs.filter(acuse_estatal__in=acuses)
-
-    # --- 5. Selección de Columnas ---
+    
+    # 3. Selección de Columnas
     seleccion = request.GET.getlist("campos") or [f for f, _ in CAMPOS_DH]
     validos = {f for f, _ in CAMPOS_DH}
-    seleccion = [f for f in seleccion if f in validos]
+    cols_query = [c for c in seleccion if c in validos]
+    if not cols_query: cols_query = [f for f, _ in CAMPOS_DH]
+    
+    # 4. Construir WHERE
+    cond, params = [], []
+    if u: cond.append("unidad_operativa = %s"); params.append(u)
+    if edo: cond.append("estado = %s"); params.append(edo)
+    if ceda: cond.append("id_ceda_agricultura = %s"); params.append(ceda)
+    if fi: cond.append("fecha_entrega >= %s"); params.append(fi)
+    if ff: cond.append("fecha_entrega <= %s"); params.append(ff)
+    
+    if acuse: cond.append("acuse_estatal = %s"); params.append(acuse)
+    if curp_s: cond.append("curp_solicitud = %s"); params.append(curp_s)
+    if curp_r: cond.append("curp_renapo = %s"); params.append(curp_r)
+    
+    if lista:
+        acuses = [l.strip() for l in lista.splitlines() if l.strip()]
+        if acuses:
+            cond.append("acuse_estatal = ANY(%s)")
+            params.append(acuses)
 
-    # --- MODO 1: DESCARGA CSV (Todo el resultado) ---
-    # Si el usuario hace clic en "Descargar", se exporta todo sin paginar.
-    if request.GET.get("csv") == "1":
-        qs = qs.values(*seleccion) # Optimización: traer solo columnas necesarias
-        
-        def filas():
-            # Encabezados
-            yield [lbl for f, lbl in CAMPOS_DH if f in seleccion]
-            # Datos (usando iterator para no saturar RAM)
-            for fila in qs.iterator(chunk_size=10000):
-                yield [fila[c] for c in seleccion]
+    where = f"WHERE {' AND '.join(cond)}" if cond else ""
+    
+    filtros_activos = bool(cond)
+    es_csv = request.GET.get("csv") == "1"
+    
+    # PROTECCIÓN: Impedir descarga masiva sin filtros
+    if es_csv and not filtros_activos:
+        return HttpResponseBadRequest("Error: La descarga masiva sin filtros no está permitida. Por favor aplique al menos un filtro (Unidad, Estado, Fecha, etc).")
+
+    # Si no hay filtros y no es CSV, mostrar pantalla vacía (solo filtros)
+    if not filtros_activos and not es_csv:
+        unidades, estados = [], []
+        try:
+            with conn.cursor() as cur:
+                cur.execute(f"SELECT DISTINCT unidad_operativa FROM {tabla} ORDER BY 1")
+                unidades = [r[0] for r in cur.fetchall() if r[0]]
+                cur.execute(f"SELECT DISTINCT estado FROM {tabla} ORDER BY 1")
+                estados = [r[0] for r in cur.fetchall() if r[0]]
+        except: pass
+        finally:
+            if not es_django and conn: conn.close()
+            
+        return render(request, "fertilizantes/vista_derechohabientes.html", {
+            "datos": [], "campos": CAMPOS_DH, "seleccionados": seleccion,
+            "unidades": unidades, "estados": estados,
+            "unidad_seleccionada": u, "estado_seleccionado": edo
+        })
+
+    # --- MODO 1: DESCARGA CSV (Streaming) ---
+    if es_csv:
+        def filas_csv():
+            header_map = dict(CAMPOS_DH)
+            yield [header_map.get(c, c) for c in cols_query]
+            
+            try:
+                with conn.cursor() as cur:
+                    sql = f"SELECT {', '.join(cols_query)} FROM {tabla} {where}"
+                    cur.execute(sql, params)
+                    
+                    while True:
+                        rows = cur.fetchmany(5000)
+                        if not rows: break
+                        for row in rows:
+                            yield [smart_str(v) if v is not None else "" for v in row]
+            except Exception as e:
+                print(f"Error CSV: {e}")
+            finally:
+                if not es_django and conn: conn.close()
 
         pseudo = io.StringIO()
         writer = csv.writer(pseudo)
 
         def stream():
             first = True
-            for row in filas():
+            for row in filas_csv():
                 pseudo.seek(0)
                 pseudo.truncate(0)
                 writer.writerow(row)
                 data = pseudo.getvalue()
                 if first:
-                    data = '\ufeff' + data  # BOM para Excel
+                    data = '\ufeff' + data
                     first = False
                 yield data
 
-        nombre = f"derechohabientes_{datetime.date.today():%Y%m%d}.csv"
-        resp = StreamingHttpResponse(stream(), content_type="text/csv; charset=utf-8")
-        resp["Content-Disposition"] = f'attachment; filename="{nombre}"'
-        return resp
+        response = StreamingHttpResponse(stream(), content_type="text/csv; charset=utf-8")
+        response["Content-Disposition"] = f'attachment; filename="derechohabientes_{datetime.date.today():%Y%m%d}.csv"'
+        return response
 
     # --- MODO 2: PANTALLA (Paginación) ---
+    page_number = request.GET.get('page', 1)
+    page_size = 200
     
-    # Solo buscamos si hay algún filtro aplicado para evitar cargar 2M de registros al inicio
-    filtros_activos = bool(request.GET)
+    try:
+        page_number = int(page_number)
+    except: page_number = 1
     
-    if filtros_activos:
-        # Optimizamos query
-        qs = qs.values(*seleccion)
-        
-        # Paginador: 200 registros por página
-        paginator = Paginator(qs, 200)
-        page_number = request.GET.get('page')
-        page_obj = paginator.get_page(page_number)
-    else:
-        # Lista vacía si no hay filtros
-        page_obj = []
+    offset = (page_number - 1) * page_size
+    
+    datos_paginados = None
+    unidades, estados = [], []
 
-    # Listas para los dropdowns
-    unidades = DH.objects.order_by('unidad_operativa').values_list('unidad_operativa', flat=True).distinct()
-    estados  = DH.objects.order_by('estado').values_list('estado', flat=True).distinct()
+    try:
+        with conn.cursor() as cur:
+            # 1. Contar total
+            cur.execute(f"SELECT COUNT(*) FROM {tabla} {where}", params)
+            total_registros = cur.fetchone()[0]
+            
+            # 2. Obtener datos paginados
+            sql = f"SELECT {', '.join(cols_query)} FROM {tabla} {where} LIMIT {page_size} OFFSET {offset}"
+            cur.execute(sql, params)
+            
+            if es_django:
+                cols_desc = [c[0] for c in cur.description]
+            else:
+                cols_desc = [c.name if hasattr(c, 'name') else c[0] for c in cur.description]
+                
+            page_data = [dict(zip(cols_desc, row)) for row in cur.fetchall()]
+            
+            # 3. Cargar filtros
+            cur.execute(f"SELECT DISTINCT unidad_operativa FROM {tabla} ORDER BY 1")
+            unidades = [r[0] for r in cur.fetchall() if r[0]]
+            cur.execute(f"SELECT DISTINCT estado FROM {tabla} ORDER BY 1")
+            estados = [r[0] for r in cur.fetchall() if r[0]]
+
+            # 4. Paginador Falso (CORREGIDO)
+            class FakePaginator:
+                def __init__(self, total, size, current, data):
+                    self.count = total
+                    self.num_pages = math.ceil(total / size)
+                    self.number = current
+                    self.has_next = current < self.num_pages
+                    self.has_previous = current > 1
+                    self.next_page_number = current + 1
+                    self.previous_page_number = current - 1
+                    self.start_index = offset + 1
+                    self.end_index = min(offset + size, total)
+                    self.object_list = data
+                    self.paginator = self
+                
+                def __iter__(self):
+                    return iter(self.object_list)
+                
+                def __len__(self):
+                    return len(self.object_list)
+
+            datos_paginados = FakePaginator(total_registros, page_size, page_number, page_data)
+
+    except Exception as e:
+        print(f"Error vista_derechohabientes: {e}")
+    finally:
+        if not es_django and conn: conn.close()
 
     return render(request, "fertilizantes/vista_derechohabientes.html", {
-        "datos":         page_obj,  # Objeto paginado
-        "campos":        CAMPOS_DH,
+        "datos": datos_paginados,
+        "campos": CAMPOS_DH,
         "seleccionados": seleccion,
-        "unidades":      unidades,
-        "estados":       estados,
-        # Preservar filtros seleccionados en el template
-        "unidad_seleccionada": uo,
-        "estado_seleccionada": edo,
+        "unidades": unidades,
+        "estados": estados,
+        "unidad_seleccionada": u,
+        "estado_seleccionado": edo,
     })
 
+    
 # ==========================================
 # 💬 COMENTARIOS Y AJAX
 # ==========================================
