@@ -677,52 +677,6 @@ def vista_inventario_diario_ceda(request):
     })
 
 
-@require_GET
-@login_required
-def ajax_filtros_generales(request):
-    """
-    API para llenar combos dependientes (Unidad -> Estado -> Zona).
-    Soporta dinámicamente 2025 y 2026.
-    """
-    tabla_param = request.GET.get("tabla")
-    unidad = request.GET.get("unidad_operativa")
-    estado = request.GET.get("estado")
-    
-    # 1. Determinar tabla y conexión correctas
-    # Si la tabla viene sin año explícito, el helper decidirá si agregar _2026
-    tabla_real, conn, es_django = get_table_and_conn(request, tabla_param)
-    
-    # Mapeo de columnas de unidad operativa (algunas tablas usan 'coordinacion_estatal')
-    # Esto es crítico porque el nombre de la columna varía según la vista
-    col_uo = "unidad_operativa"
-    if "cedas_con_remanentes" in tabla_real or "inventarios_negativos_x_ceda" in tabla_real:
-        col_uo = "coordinacion_estatal"
-
-    resp = {"estados": [], "zonas": []}
-
-    try:
-        with conn.cursor() as cur:
-            # A) Obtener Estados
-            sql_estados = f"SELECT DISTINCT estado FROM {tabla_real} " + (f"WHERE {col_uo} = %s" if unidad else "") + " ORDER BY estado"
-            cur.execute(sql_estados, [unidad] if unidad else [])
-            resp["estados"] = [r[0] for r in cur.fetchall() if r[0]]
-            
-            # B) Obtener Zonas (si hay estado seleccionado)
-            if estado:
-                sql_zonas = f"SELECT DISTINCT zona_operativa FROM {tabla_real} WHERE estado = %s" + (f" AND {col_uo} = %s" if unidad else "") + " ORDER BY 1"
-                params_zonas = [estado, unidad] if unidad else [estado]
-                cur.execute(sql_zonas, params_zonas)
-                resp["zonas"] = [r[0] for r in cur.fetchall() if r[0]]
-                
-    except Exception as e:
-        print(f"Error AJAX filtros ({tabla_real}): {e}")
-        # En caso de error (ej. tabla no existe), devolvemos listas vacías para no romper el frontend
-        
-    finally:
-        if not es_django and conn:
-            conn.close()
-            
-    return JsonResponse(resp)
 
 
 
@@ -1730,45 +1684,84 @@ def ajax_zonas_por_filtros(request):
 
 
 
+
 @require_GET
 @login_required
 def ajax_filtros_generales(request):
-    tabla, unidad, estado = request.GET.get("tabla"), request.GET.get("unidad_operativa"), request.GET.get("estado")
-    anio = get_anio_context(request)
+    """
+    API UNIFICADA para llenar combos dependientes (Unidad -> Estado -> Zona).
+    Soporta dinámicamente 2025 y 2026, y maneja excepciones de nombres de columna.
+    """
+    tabla_param = request.GET.get("tabla")
+    unidad = request.GET.get("unidad_operativa")
+    estado = request.GET.get("estado")
     
-    tablas_validas = {
-        "fletes_en_transito_detalle": "unidad_operativa",
-        "vista_fletes_autorizados_en_transito": "unidad_operativa",
-        "vista_fletes_transito_por_CEDA": "unidad_operativa",
-        "vista_comentarios_ceda": "unidad_operativa",
-        f"inventarios_negativos_{anio}": "unidad_operativa",
-        f"cedas_con_remanentes_negativos_{anio}": "coordinacion_estatal",
-        f"inventario_ceda_diario_{anio}_campo_sigap": "unidad_operativa",
-        "estadisticas_inventarios_campo": "unidad_operativa",
-        f"cedas_con_remanentes_{anio}": "coordinacion_estatal",
-    }
+    # 1. Obtener tabla real y conexión (usando el helper y el mapeo)
+    tabla_real, conn, es_django = get_table_and_conn(request, tabla_param)
     
-    # Fallback para nombres sin año (2025 default si falla)
-    if tabla not in tablas_validas:
-        if tabla == "inventarios_negativos": tabla = f"inventarios_negativos_{anio}"
-        if tabla == "cedas_con_remanentes_negativos": tabla = f"cedas_con_remanentes_negativos_{anio}"
-        if tabla not in tablas_validas: return JsonResponse({"error": "Tabla no autorizada"}, status=400)
+    # 2. Determinar nombre de columna de Unidad
+    # Por defecto es 'unidad_operativa', pero algunas tablas usan 'coordinacion_estatal'
+    col_uo = "unidad_operativa"
+    
+    # Lista de tablas conocidas que usan 'coordinacion_estatal'
+    # Se busca coincidencia parcial para cubrir versiones _2025 y _2026
+    tablas_con_coordinacion = [
+        "cedas_con_remanentes",
+        "inventarios_negativos_x_ceda",
+        "inventario_ceda_diario",
+        "fletes_fechas_incoherentes",
+        "fletes_toneladas_recibidas_atipicas"
+    ]
+    
+    if any(x in tabla_real for x in tablas_con_coordinacion):
+        col_uo = "coordinacion_estatal"
 
-    col_uo = tablas_validas.get(tabla, "unidad_operativa")
     resp = {"estados": [], "zonas": []}
 
     try:
-        with connection.cursor() as cur:
-            sql = f"SELECT DISTINCT estado FROM {tabla} " + (f"WHERE {col_uo} = %s" if unidad else "") + " ORDER BY estado"
-            cur.execute(sql, [unidad] if unidad else [])
-            resp["estados"] = [r[0] for r in cur.fetchall()]
+        with conn.cursor() as cur:
+            # A) Obtener Estados (Filtrados por Unidad si existe)
+            sql_estados = f"SELECT DISTINCT estado FROM {tabla_real} WHERE 1=1"
+            params_est = []
             
+            if unidad:
+                sql_estados += f" AND {col_uo} = %s"
+                params_est.append(unidad)
+            
+            sql_estados += " ORDER BY estado"
+            
+            cur.execute(sql_estados, params_est)
+            resp["estados"] = [r[0] for r in cur.fetchall() if r[0]]
+            
+            # B) Obtener Zonas (Filtradas por Unidad Y Estado)
+            # Esto es clave para resolver el problema de zonas compartidas
             if estado:
-                sql = f"SELECT DISTINCT zona_operativa FROM {tabla} WHERE estado = %s" + (f" AND {col_uo} = %s" if unidad else "") + " ORDER BY 1"
-                cur.execute(sql, [estado, unidad] if unidad else [estado])
-                resp["zonas"] = [r[0] for r in cur.fetchall()]
-    except Exception: pass
+                sql_zonas = f"SELECT DISTINCT zona_operativa FROM {tabla_real} WHERE estado = %s"
+                params_zonas = [estado]
+                
+                # Si hay unidad seleccionada, TAMBIÉN filtramos por ella para ser precisos
+                if unidad:
+                    sql_zonas += f" AND {col_uo} = %s"
+                    params_zonas.append(unidad)
+                    
+                sql_zonas += " ORDER BY 1"
+                
+                cur.execute(sql_zonas, params_zonas)
+                resp["zonas"] = [r[0] for r in cur.fetchall() if r[0]]
+                
+    except Exception as e:
+        print(f"Error AJAX filtros ({tabla_real}): {e}")
+        # En caso de error, devolvemos listas vacías para no romper el frontend
+        
+    finally:
+        if not es_django and conn:
+            conn.close()
+            
     return JsonResponse(resp)
+
+
+
+
 
 from datetime import date # Asegúrate de tener este import arriba
 
@@ -1810,7 +1803,7 @@ def vista_estadisticas_inventarios_campo(request):
 
             # B) Cargar Datos
             if params:
-                cursor.execute(f"SELECT * FROM {tabla} {where} ORDER BY estado", params)
+                cursor.execute(f"SELECT * FROM {tabla} {where} ORDER BY zona_operativa, estado, nombre_cedas", params)
                 
                 if es_django:
                     cols = [col[0] for col in cursor.description]
@@ -1893,19 +1886,21 @@ def vista_estadisticas_inventarios_campo(request):
 # 🚚 CONSULTA FLETES (Materialized View)
 # ==========================================
 
-MATVIEW = "mv_fletes_enriquecidos"
-
-def _fetch_all_columns():
+# Helper para obtener columnas dinámicamente de la BD correcta
+def _fetch_all_columns(conn, table_name):
     try:
-        with connection.cursor() as cur:
+        with conn.cursor() as cur:
+            # Consultamos el catálogo de Postgres para obtener las columnas de la vista materializada
             cur.execute("""
                 SELECT a.attname FROM pg_attribute a
                 JOIN pg_class c ON a.attrelid = c.oid JOIN pg_namespace n ON n.oid = c.relnamespace
                 WHERE c.relkind = 'm' AND n.nspname = 'public' AND c.relname = %s AND a.attnum > 0 AND NOT a.attisdropped
                 ORDER BY a.attnum;
-            """, [MATVIEW])
+            """, [table_name])
             return [r[0] for r in cur.fetchall()]
-    except Exception: return []
+    except Exception as e: 
+        print(f"Error fetching columns for {table_name}: {e}")
+        return []
 
 def _norm_date(value):
     if not value: return None
@@ -1916,55 +1911,54 @@ def _norm_date(value):
 
 def _build_where_and_params(q):
     where, params = [], []
+    # Filtros exactos
     for f in ["unidad_operativa", "estado", "zona_operativa", "id_ceda_agricultura", "estatus", "abreviacion_producto", "cdf_destino_original", "cdf_destino_final"]:
         if q.get(f): where.append(f"{f} = %s"); params.append(q[f])
     
+    # Filtros de fecha
     if q.get("fecha_salida_ini"): where.append("fecha_de_salida::date >= %s"); params.append(q["fecha_salida_ini"])
     if q.get("fecha_salida_fin"): where.append("fecha_de_salida::date <= %s"); params.append(q["fecha_salida_fin"])
     if q.get("fecha_entrega_ini"): where.append("fecha_de_entrega::date >= %s"); params.append(q["fecha_entrega_ini"])
     if q.get("fecha_entrega_fin"): where.append("fecha_de_entrega::date <= %s"); params.append(q["fecha_entrega_fin"])
 
+    # Filtro de folios múltiples
     raw_folios = (q.get("folios_multiline") or "").strip()
     folios = [l.strip() for l in raw_folios.replace(",", "\n").splitlines() if l.strip()]
     if folios: where.append("folio_del_flete = ANY(%s)"); params.append(folios)
 
     return ("WHERE " + " AND ".join(where)) if where else "", params
 
-# ==========================================
-# 🚚 VISTA FLETES (Mejorada: Paginación Server-Side)
-# ==========================================
-
 @login_required
 def vista_fletes(request):
     """
-    Consulta de fletes con Paginación en Servidor y diseño robusto.
-    Reemplaza la lógica de JS cliente por procesamiento en backend.
+    Consulta de fletes con Paginación en Servidor y soporte 2026.
     """
-    # 1. Obtener todas las columnas posibles de la Vista Materializada
-    all_cols = _fetch_all_columns()
+    # 1. Configuración dinámica
+    # El helper mapeará 'mv_fletes_enriquecidos' a 'mv_fletes_enriquecidos_2026' si es necesario
+    tabla, conn, es_django = get_table_and_conn(request, "mv_fletes_enriquecidos")
     
-    # 2. Definir columnas por defecto si no se seleccionan
+    # 2. Obtener columnas disponibles en la BD actual
+    all_cols = _fetch_all_columns(conn, tabla)
+    
     defaults = [
         "folio_del_flete", "unidad_operativa", "estado", "zona_operativa", 
         "id_ceda_agricultura", "estatus", "abreviacion_producto", 
         "fecha_de_salida", "fecha_de_entrega"
     ]
     
-    # 3. Procesar filtros del GET
-    # Normalizar fechas
+    # 3. Procesar filtros
     fecha_salida_ini = _norm_date(request.GET.get("fecha_salida_ini"))
     fecha_salida_fin = _norm_date(request.GET.get("fecha_salida_fin"))
     fecha_entrega_ini = _norm_date(request.GET.get("fecha_entrega_ini"))
     fecha_entrega_fin = _norm_date(request.GET.get("fecha_entrega_fin"))
 
-    # Construir diccionario de filtros
     q = {
         "unidad_operativa": request.GET.get("unidad_operativa"),
         "estado": request.GET.get("estado"),
         "zona_operativa": request.GET.get("zona_operativa"),
         "id_ceda_agricultura": request.GET.get("id_ceda_agricultura"),
         "estatus": request.GET.get("estatus"),
-        "abreviacion_producto": request.GET.get("producto"), # Ojo: en template el name debe coincidir
+        "abreviacion_producto": request.GET.get("producto"),
         "cdf_destino_original": request.GET.get("cdf_destino_original"),
         "cdf_destino_final": request.GET.get("cdf_destino_final"),
         "fecha_salida_ini": fecha_salida_ini,
@@ -1974,9 +1968,8 @@ def vista_fletes(request):
         "folios_multiline": request.GET.get("folios_multiline"),
     }
 
-    # 4. Determinar columnas seleccionadas
+    # 4. Columnas seleccionadas
     user_cols = request.GET.getlist("columnas")
-    # Si es la primera carga (sin GET) o no hay selección, usar defaults que existan en la tabla
     if not request.GET and not user_cols:
         cols = [c for c in defaults if c in all_cols]
     else:
@@ -1984,22 +1977,28 @@ def vista_fletes(request):
 
     # 5. Construir SQL WHERE
     where, params = _build_where_and_params(q)
-
-    # --- MODO 1: DESCARGA CSV ---
+    
+    # --- MODO 1: DESCARGA CSV (Streaming) ---
     if request.GET.get("csv") == "1":
-        sql = f"SELECT {', '.join(cols)} FROM {MATVIEW} {where} ORDER BY fecha_de_salida DESC NULLS LAST"
-        
-        # Usamos generator para StreamingHttpResponse (igual que en Derechohabientes)
+        # Protección contra descarga masiva sin filtros
+        if not any(q.values()):
+             return HttpResponseBadRequest("Error: La descarga masiva sin filtros no está permitida.")
+
         def filas():
             yield cols # Header
-            with connection.cursor() as cur:
-                cur.execute(sql, params)
-                while True:
-                    rows = cur.fetchmany(5000)
-                    if not rows: break
-                    for row in rows:
-                        # Limpiamos datos para evitar errores de codificación
-                        yield [smart_str(v) if v is not None else "" for v in row]
+            try:
+                with conn.cursor() as cur:
+                    sql = f"SELECT {', '.join(cols)} FROM {tabla} {where} ORDER BY fecha_de_salida DESC NULLS LAST"
+                    cur.execute(sql, params)
+                    while True:
+                        rows = cur.fetchmany(5000)
+                        if not rows: break
+                        for row in rows:
+                            yield [smart_str(v) if v is not None else "" for v in row]
+            except Exception as e:
+                print(f"Error CSV Fletes: {e}")
+            finally:
+                if not es_django and conn: conn.close()
 
         pseudo = io.StringIO()
         writer = csv.writer(pseudo)
@@ -2012,7 +2011,7 @@ def vista_fletes(request):
                 writer.writerow(row)
                 data = pseudo.getvalue()
                 if first:
-                    data = '\ufeff' + data  # BOM para Excel
+                    data = '\ufeff' + data
                     first = False
                 yield data
 
@@ -2023,81 +2022,111 @@ def vista_fletes(request):
     # --- MODO 2: PANTALLA (Paginada) ---
     datos_paginados = None
     
-    # Solo consultamos si hay filtros aplicados para evitar carga inicial pesada
     if request.GET:
-        # A) Conteo total
-        count_sql = f"SELECT COUNT(*) FROM {MATVIEW} {where}"
-        with connection.cursor() as cur:
-            cur.execute(count_sql, params)
-            total_registros = cur.fetchone()[0]
-
-        # B) Paginación manual
         try:
-            page_number = int(request.GET.get("page", 1))
-        except ValueError:
-            page_number = 1
-            
-        page_size = 100
-        offset = (page_number - 1) * page_size
-        
-        data_sql = f"""
-            SELECT {', '.join(cols)} 
-            FROM {MATVIEW} 
-            {where} 
-            ORDER BY fecha_de_salida DESC NULLS LAST 
-            LIMIT {page_size} OFFSET {offset}
-        """
-        
-        with connection.cursor() as cur:
-            cur.execute(data_sql, params)
-            rows = cur.fetchall()
-            page_obj = [dict(zip(cols, row)) for row in rows]
+            with conn.cursor() as cur:
+                # A) Conteo total
+                count_sql = f"SELECT COUNT(*) FROM {tabla} {where}"
+                cur.execute(count_sql, params)
+                total_registros = cur.fetchone()[0]
 
-        # C) Crear objeto Paginator "falso" para el template
-        class FakePaginator:
-            def __init__(self, total, size, current):
-                self.count = total
-                self.num_pages = math.ceil(total / size)
-                self.current = current
-                self.has_next = current < self.num_pages
-                self.has_previous = current > 1
-                self.next_page_number = current + 1
-                self.previous_page_number = current - 1
-                self.start_index = offset + 1
-                self.end_index = min(offset + size, total)
+                # B) Paginación
+                try: page_number = int(request.GET.get("page", 1))
+                except: page_number = 1
+                
+                page_size = 100
+                offset = (page_number - 1) * page_size
+                
+                data_sql = f"""
+                    SELECT {', '.join(cols)} 
+                    FROM {tabla} 
+                    {where} 
+                    ORDER BY fecha_de_salida DESC NULLS LAST 
+                    LIMIT {page_size} OFFSET {offset}
+                """
+                
+                cur.execute(data_sql, params)
+                
+                if es_django:
+                    cols_desc = [c[0] for c in cur.description]
+                else:
+                    cols_desc = [c.name if hasattr(c, 'name') else c[0] for c in cur.description]
 
-        datos_paginados = FakePaginator(total_registros, page_size, page_number)
-        datos_paginados.object_list = page_obj 
+                page_obj = [dict(zip(cols_desc, row)) for row in cur.fetchall()]
+
+                # C) Paginador Falso (Iterable)
+                class FakePaginator:
+                    def __init__(self, total, size, current):
+                        self.count = total
+                        self.num_pages = math.ceil(total / size)
+                        self.current = current
+                        self.has_next = current < self.num_pages
+                        self.has_previous = current > 1
+                        self.next_page_number = current + 1
+                        self.previous_page_number = current - 1
+                        self.start_index = offset + 1
+                        self.end_index = min(offset + size, total)
+                        self.object_list = page_obj # Lista de datos
+                    
+                    def __iter__(self):
+                        return iter(self.object_list)
+                    
+                    def __len__(self):
+                        return len(self.object_list)
+
+                datos_paginados = FakePaginator(total_registros, page_size, page_number)
+        
+        except Exception as e:
+            print(f"Error vista_fletes: {e}")
+        finally:
+            if not es_django and conn: conn.close()
+    else:
+        # Si no hay GET, cerramos conexión si se abrió
+        if not es_django and conn: conn.close()
 
     return render(request, "fertilizantes/vistas_fletes.html", {
         "columnas_disponibles": all_cols,
         "seleccionadas": cols,
         "datos": datos_paginados,
         "mv_tiene_columnas": bool(all_cols),
-        "matview": MATVIEW,
         "filtros": q 
     })
 
+# --- APIs AJAX para Fletes (Actualizadas para 2026) ---
+
 @require_GET
 def api_fletes_opciones(request):
+    tabla, conn, es_django = get_table_and_conn(request, "mv_fletes_enriquecidos")
+    
     q = {k: request.GET.get(k) for k in ["unidad_operativa", "estado", "zona_operativa"]}
     where, params = _build_where_and_params(q)
+    
     def distinct_of(field):
         try:
-            with connection.cursor() as cur:
-                cur.execute(f"SELECT DISTINCT {field} FROM {MATVIEW} {where} ORDER BY {field} NULLS LAST;", params)
+            with conn.cursor() as cur:
+                cur.execute(f"SELECT DISTINCT {field} FROM {tabla} {where} ORDER BY {field} NULLS LAST;", params)
                 return [r[0] for r in cur.fetchall() if r[0] not in (None, "")]
         except: return []
     
-    return JsonResponse({
-        "unidad_operativa": distinct_of("unidad_operativa"), "estado": distinct_of("estado"),
-        "zona_operativa": distinct_of("zona_operativa"), "id_ceda_agricultura": distinct_of("id_ceda_agricultura"),
-        "estatus": distinct_of("estatus"), "abreviacion_producto": distinct_of("abreviacion_producto"),
-        "cdf_destino_original": distinct_of("cdf_destino_original"), "cdf_destino_final": distinct_of("cdf_destino_final"),
-    })
+    data = {
+        "unidad_operativa": distinct_of("unidad_operativa"), 
+        "estado": distinct_of("estado"),
+        "zona_operativa": distinct_of("zona_operativa"), 
+        "id_ceda_agricultura": distinct_of("id_ceda_agricultura"),
+        "estatus": distinct_of("estatus"), 
+        "abreviacion_producto": distinct_of("abreviacion_producto"),
+        "cdf_destino_original": distinct_of("cdf_destino_original"), 
+        "cdf_destino_final": distinct_of("cdf_destino_final"),
+    }
+    
+    if not es_django and conn: conn.close()
+    return JsonResponse(data)
 
 @require_POST
 def api_fletes_consultar(request):
+    # Esta API parece ser usada para carga asíncrona o gráficos, la actualizamos por si acaso
+    tabla, conn, es_django = get_table_and_conn(request, "mv_fletes_enriquecidos")
+    
     try: body = json.loads(request.body.decode("utf-8"))
     except: return HttpResponseBadRequest("JSON inválido")
     
@@ -2106,16 +2135,17 @@ def api_fletes_consultar(request):
     
     q = {k: (body.get(k) or None) for k in ["unidad_operativa", "estado", "zona_operativa", "id_ceda_agricultura", "estatus", "abreviacion_producto", "cdf_destino_original", "cdf_destino_final", "fecha_salida_ini", "fecha_salida_fin", "fecha_entrega_ini", "fecha_entrega_fin", "folios_multiline"]}
     
-    all_cols = _fetch_all_columns()
+    all_cols = _fetch_all_columns(conn, tabla)
     user_cols = body.get("columnas") or []
     cols = [c for c in user_cols if c in all_cols]
     if not cols: cols = [c for c in ["folio_del_flete", "unidad_operativa", "estado", "zona_operativa", "id_ceda_agricultura", "estatus", "abreviacion_producto", "fecha_de_salida", "fecha_de_entrega"] if c in all_cols]
 
     where, params = _build_where_and_params(q)
-    sql = f"SELECT {', '.join(cols)} FROM {MATVIEW} {where} LIMIT 10000;"
+    sql = f"SELECT {', '.join(cols)} FROM {tabla} {where} LIMIT 10000;"
     
+    response_data = {}
     try:
-        with connection.cursor() as cur:
+        with conn.cursor() as cur:
             cur.execute(sql, params)
             rows = cur.fetchall()
             
@@ -2127,7 +2157,7 @@ def api_fletes_consultar(request):
                        COALESCE(SUM(CASE WHEN abreviacion_producto='DAP' THEN toneladas_en_el_destino END), 0)::float,
                        COALESCE(SUM(CASE WHEN abreviacion_producto='UREA' THEN toneladas_iniciales END), 0)::float,
                        COALESCE(SUM(CASE WHEN abreviacion_producto='UREA' THEN toneladas_en_el_destino END), 0)::float
-                FROM {MATVIEW} {where};
+                FROM {tabla} {where};
             """
             cur.execute(agg_sql, params)
             a = cur.fetchone()
@@ -2136,12 +2166,19 @@ def api_fletes_consultar(request):
                 "DAP": {"count": a[3], "sum_toneladas_iniciales": a[5], "sum_toneladas_en_el_destino": a[6]},
                 "UREA": {"count": a[4], "sum_toneladas_iniciales": a[7], "sum_toneladas_en_el_destino": a[8]},
             }
-    except Exception as e: return HttpResponseBadRequest(f"Error: {e}")
+            response_data = {"columns": cols, "rows": rows, "count": len(rows), "summary": summary}
+    except Exception as e: 
+        return HttpResponseBadRequest(f"Error: {e}")
+    finally:
+        if not es_django and conn: conn.close()
 
-    return JsonResponse({"columns": cols, "rows": rows, "count": len(rows), "summary": summary})
+    return JsonResponse(response_data)
 
 @require_POST
 def api_fletes_exportar_csv(request):
+    # Esta API parece redundante con la descarga GET, pero la actualizamos igual
+    tabla, conn, es_django = get_table_and_conn(request, "mv_fletes_enriquecidos")
+    
     try: body = json.loads(request.body.decode("utf-8"))
     except: return HttpResponseBadRequest("JSON inválido")
     
@@ -2150,25 +2187,27 @@ def api_fletes_exportar_csv(request):
     
     q = {k: (body.get(k) or None) for k in ["unidad_operativa", "estado", "zona_operativa", "id_ceda_agricultura", "estatus", "abreviacion_producto", "cdf_destino_original", "cdf_destino_final", "fecha_salida_ini", "fecha_salida_fin", "fecha_entrega_ini", "fecha_entrega_fin", "folios_multiline"]}
     
-    all_cols = _fetch_all_columns()
+    all_cols = _fetch_all_columns(conn, tabla)
     user_cols = body.get("columnas") or []
     cols = [c for c in user_cols if c in all_cols] or all_cols
     
     where, params = _build_where_and_params(q)
-    sql = f"SELECT {', '.join(cols)} FROM {MATVIEW} {where};"
+    sql = f"SELECT {', '.join(cols)} FROM {tabla} {where};"
     
     try:
-        with connection.cursor() as cur:
+        with conn.cursor() as cur:
             cur.execute(sql, params)
             rows = cur.fetchall()
+            
+        response = HttpResponse(content_type="text/csv; charset=utf-8")
+        response["Content-Disposition"] = 'attachment; filename="fletes_consulta.csv"'
+        writer = csv.writer(response)
+        writer.writerow(cols)
+        for r in rows: writer.writerow([smart_str(v) for v in r])
+        return response
     except Exception as e: return HttpResponseBadRequest(f"Error: {e}")
-
-    response = HttpResponse(content_type="text/csv; charset=utf-8")
-    response["Content-Disposition"] = 'attachment; filename="fletes_consulta.csv"'
-    writer = csv.writer(response)
-    writer.writerow(cols)
-    for r in rows: writer.writerow([smart_str(v) for v in r])
-    return response
+    finally:
+        if not es_django and conn: conn.close()
 
 
 # ==============================================

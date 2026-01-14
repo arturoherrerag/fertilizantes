@@ -35,7 +35,9 @@
     
     .txt-faltante { color: #dc3545; font-weight: bold; }
     .txt-excedente { color: #b8860b; font-weight: bold; }
-    
+    .cumplimiento-fail { color: #dc3545; font-weight: bold; background-color: #f8d7da; padding: 2px 6px; border-radius: 4px; }
+    .bg-confidencial { background-color: #f8f9fa; color: #6c757d; border-left: 2px solid #dee2e6 !important; }
+
     /* Estilos Clean Form */
     .form-label-custom { font-size: 0.75rem; color: #6c757d; text-transform: uppercase; font-weight: 700; margin-bottom: 0.25rem; }
     .input-custom { border: 0 !important; box-shadow: 0 .125rem .25rem rgba(0,0,0,.075) !important; }
@@ -187,6 +189,10 @@
                         <tr>
                             <th class="ubic oculto bg-light text-dark">Unidad</th>
                             <th class="ubic oculto bg-light text-dark">Estado</th>
+                            
+                            <!-- ZONA OPERATIVA (VISIBLE SIEMPRE) -->
+                            <th>Zona</th>
+                            
                             <th>ID&nbsp;CEDA</th>
                             <th>Nombre&nbsp;CEDA</th>
                             <th title="Días consecutivos reportados">Días</th>
@@ -206,11 +212,14 @@
                         <tr>
                             <td class="ubic oculto text-muted small">{{ f.unidad_operativa }}</td>
                             <td class="ubic oculto text-muted small">{{ f.estado }}</td>
+                            
+                            <!-- ZONA OPERATIVA (VISIBLE SIEMPRE) -->
+                            <td class="text-muted small">{{ f.zona_operativa }}</td>
+                            
                             <td class="font-monospace text-muted small">{{ f.id_ceda_agricultura }}</td>
                             <td class="text-truncate" style="max-width: 180px;" title="{{ f.nombre_cedas }}">{{ f.nombre_cedas }}</td>
                             <td class="text-center fw-bold small">{{ f.dias_reportados }}</td>
                             
-                            <!-- COLUMNA ÚLTIMO REPORTE (CON SEMÁFORO DE GRAVEDAD) -->
                             <td class="text-center border-start border-end" style="min-width: 110px;">
                                 <div class="d-flex justify-content-between align-items-center px-2">
                                     <span class="text-muted small me-2">{{ f.fecha_ultimo_reporte|date:"d/m" }}</span>
@@ -239,16 +248,16 @@
                             <td class="text-center bg-light">
                                 {% if f.dap_campo_vs_sigap < -1.0 %}<span class="badge badge-faltante-grave rounded-pill w-100">FALTANTE GRAVE</span>
                                 {% elif f.dap_campo_vs_sigap < -0.01 %}<span class="badge badge-faltante-menor rounded-pill w-100 text-truncate">Faltante Menor</span>
-                                {% elif f.dap_campo_vs_sigap > 1.0 %}<span class="badge badge-excedente-grave rounded-pill w-100 text-truncate">Exc. Mayor</span>
-                                {% elif f.dap_campo_vs_sigap > 0.01 %}<span class="badge badge-excedente-menor rounded-pill w-100 text-truncate">Exc. Menor</span>
+                                {% elif f.dap_campo_vs_sigap > 1.0 %}<span class="badge badge-excedente-grave rounded-pill w-100 text-truncate">EXCEDENTE GRAVE</span>
+                                {% elif f.dap_campo_vs_sigap > 0.01 %}<span class="badge badge-excedente-menor rounded-pill w-100 text-truncate">Excedente Menor</span>
                                 {% else %}<span class="badge badge-ok"><i class="bi bi-check-lg"></i></span>{% endif %}
                             </td>
                             <td class="text-end fw-bold border-start">{{ f.inventario_urea_ultimo|default:0|formato_mx:3 }}</td>
                             <td class="text-center bg-light">
                                 {% if f.urea_campo_vs_sigap < -1.0 %}<span class="badge badge-faltante-grave rounded-pill w-100">FALTANTE GRAVE</span>
                                 {% elif f.urea_campo_vs_sigap < -0.01 %}<span class="badge badge-faltante-menor rounded-pill w-100 text-truncate">Faltante Menor</span>
-                                {% elif f.urea_campo_vs_sigap > 1.0 %}<span class="badge badge-excedente-grave rounded-pill w-100 text-truncate">Exc. Mayor</span>
-                                {% elif f.urea_campo_vs_sigap > 0.01 %}<span class="badge badge-excedente-menor rounded-pill w-100 text-truncate">Exc. Menor</span>
+                                {% elif f.urea_campo_vs_sigap > 1.0 %}<span class="badge badge-excedente-grave rounded-pill w-100 text-truncate">EXCEDENTE GRAVE</span>
+                                {% elif f.urea_campo_vs_sigap > 0.01 %}<span class="badge badge-excedente-menor rounded-pill w-100 text-truncate">Excedente Menor</span>
                                 {% else %}<span class="badge badge-ok"><i class="bi bi-check-lg"></i></span>{% endif %}
                             </td>
                             <td class="confidencial oculto text-end bg-confidencial small">{{ f.dap_sigap|default:0|formato_mx:3 }}</td>
@@ -270,7 +279,7 @@
         <div class="card-footer bg-white py-2 small text-muted d-flex justify-content-between align-items-center">
             <div class="d-flex gap-3">
                 <span><i class="bi bi-square-fill text-danger me-1"></i> Faltante > 1t (Grave)</span>
-                <span><i class="bi bi-square-fill me-1" style="color: #b8860b;"></i> Excedente > 1t (Mayor)</span>
+                <span><i class="bi bi-square-fill me-1" style="color: #b8860b;"></i> Excedente > 1t (Grave)</span>
                 <span><span class="badge bg-danger" style="font-size: 0.6rem;">X días</span> Sin reporte</span>
             </div>
             <span>{{ datos|length }} registros</span>
@@ -287,6 +296,7 @@
             <tr>
                 <th>Unidad Operativa</th>
                 <th>Estado</th>
+                <th>Zona Operativa</th> <!-- NUEVA COLUMNA -->
                 <th>ID CEDA</th>
                 <th>Nombre CEDA</th>
                 <th>Días Reportados</th>
@@ -306,6 +316,7 @@
             <tr>
                 <td>{{ f.unidad_operativa }}</td>
                 <td>{{ f.estado }}</td>
+                <td>{{ f.zona_operativa }}</td> <!-- NUEVA COLUMNA -->
                 <td>{{ f.id_ceda_agricultura }}</td>
                 <td>{{ f.nombre_cedas }}</td>
                 <td>{{ f.dias_reportados }}</td>
@@ -348,6 +359,7 @@ document.addEventListener('DOMContentLoaded', function() {
         fetch(`${urlFiltros}?${params.toString()}`)
             .then(r => r.json())
             .then(data => {
+                // Solo recargar estados si cambió la unidad o está vacío
                 if(estadoSelect.options.length <= 1 || u !== estadoSelect.getAttribute('data-prev-unit')){
                     fillSelect(estadoSelect, data.estados, estadoPre);
                     estadoSelect.setAttribute('data-prev-unit', u);
@@ -374,6 +386,7 @@ document.addEventListener('DOMContentLoaded', function() {
             cargarDependientes(); 
         });
         estadoSelect.addEventListener('change', cargarDependientes);
+        // Carga inicial
         cargarDependientes();
     }
 
