@@ -62,5 +62,5 @@ urlpatterns = [
     path("ocr/extract/", views.ocr_extract, name="ocr_extract"),
 
     # URLS sistema 2026
-    path('visualizacion/avance-2026/', views.dashboard_avance_nacional_2026, name='dashboard_avance_2026'),
+    path('visualizacion/avance-2026/', views.dashboard_avance_nacional, name='dashboard_avance_2026'),
 ]

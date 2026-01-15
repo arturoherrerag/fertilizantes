@@ -3,8 +3,81 @@
 
 {% block title %}Avance Nacional{% endblock %}
 
+{% block extra_css %}
+<style>
+  /* --- Estilos Tarjeta KPI Moderna --- */
+  .card-kpi {
+    border: none;
+    border-radius: 15px; /* Bordes redondeados como la referencia */
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08); /* Sombra suave */
+    overflow: hidden; /* Para que el encabezado respete el borde redondeado */
+    transition: transform 0.2s;
+    background-color: #fff;
+  }
+
+  .card-kpi:hover {
+    transform: translateY(-3px); /* Pequeño efecto al pasar el mouse */
+  }
+
+  .kpi-header {
+    color: white;
+    font-weight: 800; /* Letra gruesa */
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    padding: 12px 10px;
+    text-align: center;
+    letter-spacing: 0.5px;
+  }
+
+  .kpi-body {
+    padding: 20px 15px;
+    text-align: center;
+  }
+
+  .kpi-value {
+    font-size: 2.4rem; /* Número grande */
+    font-weight: 700;
+    color: #212529;
+    margin-bottom: 5px;
+    line-height: 1.1;
+  }
+
+  .kpi-meta {
+    font-size: 0.95rem;
+    color: #888; /* Gris para la meta */
+    margin-bottom: 2px;
+    font-weight: 500;
+  }
+
+  .kpi-pendiente {
+    font-size: 0.95rem;
+    color: #000; /* Negro para el pendiente */
+    font-weight: 700; /* Negrita */
+    margin-bottom: 15px;
+  }
+
+  /* Contenedor de la gráfica para centrar el porcentaje */
+  .chart-container {
+    position: relative;
+    height: 180px;
+    width: 100%;
+    margin-top: 10px;
+  }
+
+  .donut-percent {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2.2rem;
+    font-weight: 800;
+    /* El color se inyectará vía JS para coincidir con el header */
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid mt-4">
+<div class="container-fluid mt-4 year-{{ anio_actual }}"> {# Añadimos una clase CSS con el año actual #}
   
   <div class="text-center mb-4">
     <h2 class="fw-bold text-dark">Avance Nacional {{ anio_actual }}</h2>
@@ -67,5 +140,31 @@
 
 {% block extra_js %}
 <script src="{% static 'js/chart.umd.min.js' %}"></script>
-<script src="{% static 'js/dashboards.js' %}"></script>
+<script>
+  // Definimos los colores de la paleta institucional en JavaScript,
+  // adaptándolos al año activo.
+  window.COLORES = {};
+  const anioActual = "{{ anio_actual }}";
+
+  if (anioActual === "2026") {
+    // Colores para el año 2026 (usando las variables CSS de fertilizantes_2026.css)
+    window.COLORES = {
+      abasto: "#002f2a",     // var(--pf-green-dark)
+      entregado: "#1e5b4f",  // var(--pf-green-main)
+      dh: "#611232",         // var(--pf-burgundy)
+      superficie: "#a57f2c", // var(--pf-gold)
+      gris: "#e0e0e0"        // Gris para el fondo de la dona
+    };
+  } else { 
+    // Colores para el año 2025 (o por defecto)
+    window.COLORES = {
+      abasto: "#004634",     // Verde Oscuro
+      entregado: "#146B4D",  // Verde Medio
+      dh: "#6A1B3F",         // Vino
+      superficie: "#A1760E", // Dorado
+      gris: "#e0e0e0"        // Gris para el fondo de la dona
+    };
+  }
+</script>
+<script src="{% static 'js/dashboards.js' %}?v={{ timestamp }}"></script> {# Agregamos timestamp para evitar caché #}
 {% endblock %}

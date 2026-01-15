@@ -255,19 +255,41 @@ def reporte_entregas_nacionales(request):
 
 @login_required
 def dashboard_avance_nacional(request):
-    return render(request, 'fertilizantes/visualizacion/dashboard_nacional.html', {"timestamp": int(now().timestamp())})
+    """
+    Vista unificada para el Dashboard de Avance Nacional,
+    adaptándose al año de operación activo.
+    """
+    anio_actual = get_anio_context(request)
+    return render(request, 'fertilizantes/visualizacion/dashboard_nacional.html', {
+        "anio_actual": anio_actual,
+        "timestamp": int(now().timestamp()) # Para evitar problemas de caché con JS
+    })
 
+# Redirigimos la vista específica de 2026 a la unificada
 @login_required
 def dashboard_avance_nacional_2026(request):
-    return render(request, 'fertilizantes/visualizacion/dashboard_nacional_2026.html', {"timestamp": int(now().timestamp())})
+    return dashboard_avance_nacional(request)
+
+# En fertilizantes/views.py
 
 @login_required
 def api_kpi_avance_nacional(request):
     anio = get_anio_context(request)
+    
+    # 1. Definir nombres de tablas según el año
     tbl_avance = f"avance_operativo_ceda_{anio}"
     tbl_metas  = f"metas_{anio}"
     tbl_red    = f"red_distribucion_{anio}" if anio == "2026" else "red_distribucion"
     
+    # 2. Seleccionar la conexión correcta
+    if anio == "2026":
+        conn = get_psycopg_conn_for_year(2026) # Conexión a fertilizantes_2026
+        es_django_conn = False
+    else:
+        conn = connection # Conexión default (fertilizantes 2025)
+        es_django_conn = True
+
+    # Filtros
     filtros = {
         "unidad": request.GET.get("unidad_operativa"),
         "estado": request.GET.get("estado"),
@@ -286,6 +308,7 @@ def api_kpi_avance_nacional(request):
     where = "WHERE " + " AND ".join(cond) if cond else ""
     
     try:
+        # Lógica de consulta
         if tipo_meta == "oficial" and not filtros["ceda"]:
             sql = f"""
             WITH avance_estado AS (
@@ -309,12 +332,18 @@ def api_kpi_avance_nacional(request):
                 FROM {tbl_avance} a JOIN {tbl_red} rd ON a.id_ceda_agricultura = rd.id_ceda_agricultura {where}
             """
 
-        with connection.cursor() as cursor:
+        with conn.cursor() as cursor:
             cursor.execute(sql, params)
             meta, abasto, entregado, dh_apoyados, ha_apoyadas, meta_dh, meta_ha = cursor.fetchone()
     
     except Exception as e:
+        print(f"Error API KPI ({anio}): {e}")
         return JsonResponse({"error": str(e)}, status=500)
+    
+    finally:
+        # IMPORTANTE: Cerrar conexión manual para evitar fugas
+        if not es_django_conn and conn:
+            conn.close()
 
     def pct(a, m): return min(math.floor((a or 0) * 100 / m), 100) if m else 0
     
@@ -337,30 +366,152 @@ def api_kpi_avance_nacional(request):
     }
     return JsonResponse(data)
 
-@login_required
-def api_kpi_avance_nacional_2026(request):
-    return api_kpi_avance_nacional(request)
+# En fertilizantes/views.py
 
 @login_required
 def api_filtros_kpi(request):
     anio = get_anio_context(request)
     tbl_red = f"red_distribucion_{anio}" if anio == "2026" else "red_distribucion"
+    
+    # Selección de conexión
+    if anio == "2026":
+        conn = get_psycopg_conn_for_year(2026)
+        es_django_conn = False
+    else:
+        conn = connection
+        es_django_conn = True
+
+    unidades, estados = [], []
+    
     try:
-        with connection.cursor() as cursor:
+        with conn.cursor() as cursor:
             cursor.execute(f"SELECT DISTINCT coordinacion_estatal FROM {tbl_red} ORDER BY 1")
             unidades = [r[0] for r in cursor.fetchall() if r[0]]
+            
             cursor.execute(f"SELECT DISTINCT estado FROM {tbl_red} ORDER BY 1")
             estados = [r[0] for r in cursor.fetchall() if r[0]]
-    except Exception: units, estados = [], []
+    except Exception as e:
+        print(f"Error Filtros KPI ({anio}): {e}")
+    finally:
+        if not es_django_conn and conn:
+            conn.close()
+            
     return JsonResponse({"unidades": unidades, "estados": estados})
 
 @login_required
 def resumen_estatal(request):
-    return render(request, "fertilizantes/visualizacion/resumen_estatal.html")
+    anio_actual = get_anio_context(request)
+    return render(request, "fertilizantes/visualizacion/resumen_estatal.html", {
+        "anio_actual": anio_actual
+    })
 
 @login_required
 def api_tabla_resumen_por_estado(request):
-    return JsonResponse({"resultados": []})
+    anio = get_anio_context(request)
+    
+    # 1. Definir nombres de tablas según el año
+    tbl_avance = f"avance_operativo_ceda_{anio}"
+    tbl_metas  = f"metas_{anio}"
+    tbl_red    = f"red_distribucion_{anio}" if anio == "2026" else "red_distribucion"
+
+    # 2. Selección de conexión (CRÍTICO para que funcione en 2026)
+    if anio == "2026":
+        conn = get_psycopg_conn_for_year(2026)
+        es_django_conn = False
+    else:
+        conn = connection
+        es_django_conn = True
+
+    # 3. Filtros recibidos del JS
+    unidad = request.GET.get("unidad_operativa")
+    estado = request.GET.get("estado")
+    # El JS envía 'tipo_meta', aunque por ahora usaremos la lógica estándar
+    # tipo_meta = request.GET.get("tipo_meta", "operativa") 
+
+    cond_avance = []
+    params = []
+
+    if unidad:
+        cond_avance.append("rd.coordinacion_estatal = %s")
+        params.append(unidad)
+    if estado:
+        cond_avance.append("rd.estado = %s")
+        params.append(estado)
+
+    where_avance = "WHERE " + " AND ".join(cond_avance) if cond_avance else ""
+
+    # 4. Consulta SQL
+    # Esta consulta agrupa lo entregado en la tabla de avance y lo une (LEFT JOIN)
+    # con la tabla de metas para que aparezcan todos los estados, tengan avance o no.
+    sql = f"""
+    WITH avance_agrupado AS (
+        SELECT 
+            rd.estado,
+            SUM(a.dap_flete + a.urea_flete + a.dap_transfer + a.urea_transfer + a.dap_remanente + a.urea_remanente - a.dap_transf_out - a.urea_transf_out - a.dap_rem_out - a.urea_rem_out) AS abasto,
+            SUM(a.dap_dh + a.urea_dh) AS entregado,
+            SUM(a.dh_apoyados) AS dh_apoyados,
+            SUM(a.ha_apoyadas) AS ha_apoyadas
+        FROM {tbl_avance} a
+        JOIN {tbl_red} rd ON a.id_ceda_agricultura = rd.id_ceda_agricultura
+        {where_avance}
+        GROUP BY rd.estado
+    )
+    SELECT 
+        m.estado,
+        m.total_ton AS meta_ton,
+        COALESCE(av.abasto, 0),
+        COALESCE(av.entregado, 0),
+        m.derechohabientes AS meta_dh,
+        COALESCE(av.dh_apoyados, 0),
+        m.superficie_ha AS meta_ha,
+        COALESCE(av.ha_apoyadas, 0)
+    FROM {tbl_metas} m
+    LEFT JOIN avance_agrupado av ON m.estado = av.estado
+    WHERE 1=1
+    """
+    
+    # Si el usuario filtró por estado, aplicamos el filtro también a la tabla maestra de metas
+    if estado:
+        sql += " AND m.estado = %s"
+        params.append(estado)
+    
+    sql += " ORDER BY m.estado"
+
+    resultados = []
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, params)
+            rows = cursor.fetchall()
+            
+            for row in rows:
+                # Mapeo de columnas SQL a las claves que espera dashboards.js
+                meta_ton = float(row[1] or 0)
+                entregado = float(row[3] or 0)
+                
+                # Calculamos el porcentaje aquí para que el JS pueda ordenar (data.sort)
+                pct = (entregado / meta_ton * 100) if meta_ton > 0 else 0
+
+                resultados.append({
+                    "estado": row[0],
+                    "meta_total_ton": meta_ton,
+                    "abasto": float(row[2] or 0),
+                    "entregado": entregado,
+                    "meta_dh": int(row[4] or 0),
+                    "dh_apoyados": int(row[5] or 0),
+                    "meta_ha": float(row[6] or 0),
+                    "ha_apoyadas": float(row[7] or 0),
+                    "pct_entregado": pct 
+                })
+
+    except Exception as e:
+        print(f"Error Resumen Estatal ({anio}): {e}")
+        return JsonResponse({"error": str(e)}, status=500)
+    finally:
+        # Cerrar conexión manual si estamos en 2026
+        if not es_django_conn and conn:
+            conn.close()
+
+    return JsonResponse({"resultados": resultados})
 
 # ==========================================
 # 🗂️ VISTAS DETALLADAS

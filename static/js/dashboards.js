@@ -1,14 +1,14 @@
 document.addEventListener("DOMContentLoaded", () => {
-  // Paleta Institucional (Basada en tus archivos originales)
+  // 1. Paleta Institucional Global
   window.COLORES = {
     abasto: "#004634",     // Verde Oscuro
     entregado: "#146B4D",  // Verde Medio
-    dh: "#6A1B3F",         // Vino
+    dh: "#6A1B3F",         // Guinda
     superficie: "#A1760E", // Dorado
-    gris: "#e0e0e0"        // Gris para el fondo de la dona
+    gris: "#e0e0e0"        // Gris claro (fondo de donas/barras)
   };
 
-  // 1. Detectar Dashboard Nacional
+  // 2. Detectar si estamos en el Dashboard Nacional
   const kpiContainer = document.getElementById("kpi-cards");
   if (kpiContainer) {
     console.log("📊 Iniciando Dashboard Nacional...");
@@ -25,14 +25,14 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // 2. Detectar Resumen Estatal
+  // 3. Detectar si estamos en el Resumen Estatal
   const tablaEstados = document.getElementById("tabla_estados");
   if (tablaEstados) {
     console.log("📍 Iniciando Resumen Estatal...");
     cargarResumen();
     cargarFiltros("datalist");
 
-    // Listeners
+    // Listeners para recarga automática al cambiar filtros
     ["filtro_unidad", "filtro_estado", "filtro_tipo_meta"].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.addEventListener("change", cargarResumen);
@@ -41,12 +41,12 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // ==========================================
-//  DASHBOARD NACIONAL (KPIs)
+//  SECCIÓN 1: DASHBOARD NACIONAL (KPIs)
 // ==========================================
 
 function cargarKpi(params = {}) {
   const container = document.getElementById("kpi-cards");
-  // Loader simple
+  // Loader simple mientras carga
   container.innerHTML = '<div class="col-12 text-center py-5"><div class="spinner-border text-secondary" role="status"></div></div>';
 
   const q = new URLSearchParams(params).toString();
@@ -60,7 +60,7 @@ function cargarKpi(params = {}) {
     })
     .catch(err => {
       console.error("Error KPI:", err);
-      container.innerHTML = `<div class="alert alert-danger">Error al cargar datos.</div>`;
+      container.innerHTML = `<div class="alert alert-danger">Error al cargar datos: ${err.message}</div>`;
     });
 }
 
@@ -105,37 +105,43 @@ function pintarTarjetas(cards) {
     const meta = parseFloat(c.meta) || 0;
     const avance = parseFloat(c.avance) || 0;
     const pendiente = Math.max(meta - avance, 0);
-    // Calcular porcentaje (tope 100 visualmente para la gráfica)
-    const pct = meta > 0 ? (avance / meta) * 100 : 0;
-    const pctVisual = Math.min(100, pct);
     
-    // Formateador de números (miles y decimales)
+    // Calcular porcentaje (tope visual 100%)
+    const pct = meta > 0 ? (avance / meta) * 100 : 0;
+    
+    // Formateador de números
     const fmt = new Intl.NumberFormat('en-US', {
       minimumFractionDigits: c.es_entero ? 0 : 2,
       maximumFractionDigits: c.es_entero ? 0 : 2
     });
 
+    const colorTema = window.COLORES[c.id];
+
+    // HTML de la tarjeta moderna
     const html = `
       <div class="col-12 col-md-6 col-lg-3 mb-4">
-        <div class="card shadow-sm h-100 border-0 overflow-hidden">
-          <div class="card-header text-white fw-bold text-center py-2" 
-               style="background-color: ${window.COLORES[c.id]}; font-size: 1.1rem;">
+        <div class="card-kpi h-100">
+          
+          <!-- Encabezado sólido -->
+          <div class="kpi-header" style="background-color: ${colorTema};">
             ${c.titulo}
           </div>
           
-          <div class="card-body text-center position-relative">
-            <h2 class="display-6 fw-bold mb-0 text-dark">${fmt.format(avance)}</h2>
+          <div class="kpi-body">
+            <div class="kpi-value">${fmt.format(avance)}</div>
             
-            <div class="small text-muted mb-3">
-              Meta: ${fmt.format(meta)} <span class="mx-1">|</span> Pendiente: ${fmt.format(pendiente)}
+            <div class="kpi-meta">
+              Meta ${fmt.format(meta)}
             </div>
             
-            <div style="height: 160px; position: relative;">
+            <div class="kpi-pendiente">
+              Pendiente ${fmt.format(pendiente)}
+            </div>
+            
+            <div class="chart-container">
               <canvas id="chart-${c.id}"></canvas>
-              
-              <div class="position-absolute top-50 start-50 translate-middle fw-bold" 
-                   style="color: ${window.COLORES[c.id]}; font-size: 1.5rem;">
-                ${pct.toFixed(1)}%
+              <div class="donut-percent" style="color: ${colorTema};">
+                ${pct.toFixed(0)}%
               </div>
             </div>
 
@@ -145,12 +151,11 @@ function pintarTarjetas(cards) {
     `;
     cont.insertAdjacentHTML("beforeend", html);
 
-    // Dibujar la gráfica
-    renderDonut(`chart-${c.id}`, avance, pendiente, c.id, fmt);
+    renderDonut(`chart-${c.id}`, avance, pendiente, c.id);
   });
 }
 
-function renderDonut(canvasId, avance, pendiente, tipo, formatter) {
+function renderDonut(canvasId, avance, pendiente, tipo) {
   const ctx = document.getElementById(canvasId);
   if (!ctx) return;
 
@@ -168,31 +173,17 @@ function renderDonut(canvasId, avance, pendiente, tipo, formatter) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      // 🔥 AQUÍ ESTÁ EL AJUSTE DE GROSOR:
-      // 50% = Dona gruesa. (Antes estaba en 75% o 60%)
-      cutout: "50%", 
+      cutout: "65%", // Dona gruesa
       plugins: {
         legend: { display: false },
-        tooltip: {
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-          callbacks: {
-            label: function(context) {
-              let label = context.label || '';
-              if (label) label += ': ';
-              if (context.parsed !== null) {
-                label += formatter.format(context.parsed);
-              }
-              return label;
-            }
-          }
-        }
+        tooltip: { enabled: false }
       }
     }
   });
 }
 
 // ==========================================
-//  RESUMEN ESTATAL (Tabla)
+//  SECCIÓN 2: RESUMEN ESTATAL (Tabla)
 // ==========================================
 
 function cargarResumen() {
@@ -212,22 +203,30 @@ function cargarResumen() {
       tbody.innerHTML = "";
 
       if (data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="17" class="text-center py-4 text-muted">No hay datos.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="17" class="text-center py-4 text-muted">No hay datos disponibles con los filtros seleccionados.</td></tr>`;
         return;
       }
 
+      // Ordenar por porcentaje de entrega descendente
       data.sort((a, b) => b.pct_entregado - a.pct_entregado);
 
+      // Variables para totales
       let tMetaTon=0, tAbasto=0, tEnt=0, tMetaDh=0, tDh=0, tMetaHa=0, tHa=0;
 
       data.forEach(r => {
-        tMetaTon += r.meta_total_ton; tAbasto += r.abasto; tEnt += r.entregado;
-        tMetaDh += r.meta_dh; tDh += r.dh_apoyados;
-        tMetaHa += r.meta_ha; tHa += r.ha_apoyadas;
+        // Acumular totales
+        tMetaTon += r.meta_total_ton; 
+        tAbasto += r.abasto; 
+        tEnt += r.entregado;
+        tMetaDh += r.meta_dh; 
+        tDh += r.dh_apoyados;
+        tMetaHa += r.meta_ha; 
+        tHa += r.ha_apoyadas;
 
+        // Insertar fila
         tbody.insertAdjacentHTML("beforeend", `
           <tr>
-            <td class="estado bg-light fw-bold text-start ps-3">${r.estado}</td>
+            <td class="col-estado ps-2">${r.estado}</td>
             ${colTabla(r.meta_total_ton, r.abasto, "abasto")}
             ${colTabla(r.meta_total_ton, r.entregado, "entregado")}
             ${colTabla(r.meta_dh, r.dh_apoyados, "dh", true)}
@@ -236,43 +235,66 @@ function cargarResumen() {
         `);
       });
 
+      // Insertar fila de TOTALES
       tbody.insertAdjacentHTML("beforeend", `
-        <tr class="fw-bold table-secondary border-top border-3 border-dark">
-          <td class="text-start ps-3">TOTAL NACIONAL</td>
-          ${colTabla(tMetaTon, tAbasto, "abasto")}
-          ${colTabla(tMetaTon, tEnt, "entregado")}
-          ${colTabla(tMetaDh, tDh, "dh", true)}
-          ${colTabla(tMetaHa, tHa, "superficie", true)}
+        <tr class="row-total">
+          <td class="ps-2">TOTAL NACIONAL</td>
+          ${colTabla(tMetaTon, tAbasto, "abasto", false, true)}
+          ${colTabla(tMetaTon, tEnt, "entregado", false, true)}
+          ${colTabla(tMetaDh, tDh, "dh", true, true)}
+          ${colTabla(tMetaHa, tHa, "superficie", true, true)}
         </tr>
       `);
-
-      setTimeout(() => {
-        document.querySelectorAll(".progress-bar").forEach(b => b.style.width = b.dataset.width);
-      }, 50);
     });
 }
 
-function colTabla(meta, avance, tipo, esEntero = false) {
+/**
+ * Genera el HTML de las 4 columnas (Meta, Avance, Pendiente, %) para un tipo de dato.
+ * @param {number} meta - Valor meta
+ * @param {number} avance - Valor avance
+ * @param {string} tipo - Clave del color ('abasto', 'entregado', 'dh', 'superficie')
+ * @param {boolean} esEntero - Si true, formatea sin decimales
+ * @param {boolean} esTotal - Si true, aplica estilos de fila de totales (texto blanco)
+ */
+function colTabla(meta, avance, tipo, esEntero = false, esTotal = false) {
   meta = parseFloat(meta) || 0;
   avance = parseFloat(avance) || 0;
   const pend = Math.max(meta - avance, 0);
-  const pct = meta > 0 ? Math.min(100, (avance / meta) * 100) : 0;
+  
+  let pct = 0;
+  if (meta > 0) {
+    pct = (avance / meta) * 100;
+  }
+  const widthPct = Math.min(pct, 100); 
   
   const fmt = new Intl.NumberFormat('en-US', {
     minimumFractionDigits: esEntero ? 0 : 1,
     maximumFractionDigits: esEntero ? 0 : 1
   });
 
+  // Obtener color HEX exacto para inyectar en el estilo (evita override de Bootstrap)
+  const colorHex = window.COLORES[tipo] || "#000";
+
+  // Estilos condicionales para texto
+  const classMeta = esTotal ? "text-white opacity-75" : "text-muted";
+  const classAvance = esTotal ? "text-white" : "text-dark fw-bold";
+  const classPend = esTotal ? "text-white opacity-75" : "text-danger small";
+  
+  // Si la barra es muy pequeña, oscurecemos el texto del porcentaje para que se lea
+  const classPctText = widthPct < 20 ? "text-dark-shadow" : "";
+
   return `
-    <td class="meta text-muted small">${fmt.format(meta)}</td>
-    <td class="avance fw-bold">${fmt.format(avance)}</td>
-    <td class="pendiente text-muted small">${fmt.format(pend)}</td>
-    <td class="col-porcentaje p-1 align-middle">
-      <div class="progress position-relative" style="height: 18px; background-color: #e9ecef;">
-        <div class="progress-bar ${tipo}" data-width="${pct}%" style="width: 0%;"></div>
-        <span class="position-absolute w-100 text-center text-dark" 
-              style="font-size: 0.7rem; top: 1px; font-weight: bold; text-shadow: 0 0 2px white;">
-          ${pct.toFixed(1)}%
+    <td class="text-numero ${classMeta}">${fmt.format(meta)}</td>
+    <td class="text-numero ${classAvance}">${fmt.format(avance)}</td>
+    <td class="text-numero ${classPend}">${fmt.format(pend)}</td>
+    
+    <td class="td-porcentaje align-middle">
+      <div class="pf-progress-container">
+        <div class="pf-progress-bar" 
+             style="width: ${widthPct}%; background-color: ${colorHex} !important;">
+        </div>
+        <span class="pf-progress-text ${classPctText}">
+          ${pct.toFixed(0)}%
         </span>
       </div>
     </td>
@@ -280,8 +302,9 @@ function colTabla(meta, avance, tipo, esEntero = false) {
 }
 
 // ==========================================
-//  FILTROS
+//  SECCIÓN 3: FILTROS DINÁMICOS
 // ==========================================
+
 function cargarFiltros(modo) {
   fetch("/api/filtros_kpi/")
     .then(r => r.json())
